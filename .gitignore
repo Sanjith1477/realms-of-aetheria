@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output (contains baked-in env values when built with a .env)
+dist/
+
+# Secrets — never commit; use .env.example as the template
+.env
+.env.local
+.env.*.local
+
+# Editor/OS noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
