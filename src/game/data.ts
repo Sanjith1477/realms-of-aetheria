@@ -390,18 +390,24 @@ export const RARITY_META: Record<Rarity, { label: string; color: string; weight:
 };
 
 /** Single source of truth for rarity unlock gating. */
-export const LEGENDARY_UNLOCK_LEVEL = 5;
+export const RARE_UNLOCK_LEVEL = 3;
+export const EPIC_UNLOCK_LEVEL = 6;
+export const LEGENDARY_UNLOCK_LEVEL = 10;
+export const SHOP_RARE_UNLOCK_WAVE = 3;
 export const SHOP_EPIC_UNLOCK_WAVE = 5;
 export const SHOP_LEGENDARY_UNLOCK_WAVE = 10;
 
 /** Whether a level-up power rarity is unlocked at the given player level. */
 export function isRarityUnlocked(rarity: Rarity, level: number): boolean {
+  if (rarity === 'rare') return level >= RARE_UNLOCK_LEVEL;
+  if (rarity === 'epic') return level >= EPIC_UNLOCK_LEVEL;
   if (rarity === 'legendary') return level >= LEGENDARY_UNLOCK_LEVEL;
   return true;
 }
 
 /** Whether a shop item rarity is unlocked at the given wave. */
 export function isShopRarityUnlocked(rarity: Rarity, wave: number): boolean {
+  if (rarity === 'rare') return wave >= SHOP_RARE_UNLOCK_WAVE;
   if (rarity === 'epic') return wave >= SHOP_EPIC_UNLOCK_WAVE;
   if (rarity === 'legendary') return wave >= SHOP_LEGENDARY_UNLOCK_WAVE;
   return true;

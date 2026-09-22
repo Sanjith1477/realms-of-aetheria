@@ -129,13 +129,14 @@ export function saveScore(entry: ScoreEntry): ScoreEntry[] {
   return top;
 }
 
-/** Collapse any score list to one row per player (their best score). */
+/** Collapse any score list to one row per player and legend (their best score). */
 export function dedupeByPlayer(scores: ScoreEntry[]): ScoreEntry[] {
   const best = new Map<string, ScoreEntry>();
   for (const s of scores) {
     const who = (s.userId ?? s.userName ?? s.name).toLowerCase();
-    const prev = best.get(who);
-    if (!prev || s.score > prev.score) best.set(who, s);
+    const key = `${who}::${s.classId}`;
+    const prev = best.get(key);
+    if (!prev || s.score > prev.score) best.set(key, s);
   }
   return [...best.values()].sort(
     (a, b) => b.score - a.score || (a.durationSeconds ?? Infinity) - (b.durationSeconds ?? Infinity)

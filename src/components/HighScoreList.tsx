@@ -32,12 +32,12 @@ export function HighScoreList({ scores, limit = 8, highlightScore, activeProfile
   }
   return (
     <div className="flex flex-col gap-[3px]">
-      <div className="grid grid-cols-[24px_18px_minmax(0,1fr)_66px_66px_78px] items-center gap-2 px-2 py-1 text-[8px] font-display font-bold tracking-[0.18em] text-[#aab4c5] border-b border-iron/80">
+      <div className="grid grid-cols-[20px_16px_minmax(0,1fr)_56px_62px] sm:grid-cols-[24px_18px_minmax(0,1fr)_66px_66px_78px] items-center gap-1.5 sm:gap-2 px-2 py-1 text-[8px] font-display font-bold tracking-[0.18em] text-[#aab4c5] border-b border-iron/80">
         <span>#</span>
         <span />
         <span>PLAYER</span>
         <span className="text-right">WAVE</span>
-        <span className="text-right">TIME</span>
+        <span className="text-right hidden sm:block">TIME</span>
         <span className="text-right text-gold">SCORE</span>
       </div>
       {list.map((s, i) => {
@@ -49,7 +49,7 @@ export function HighScoreList({ scores, limit = 8, highlightScore, activeProfile
           <div
             key={`${s.name}-${s.score}-${i}`}
             className={cn(
-              'grid grid-cols-[24px_18px_minmax(0,1fr)_66px_66px_78px] items-center gap-2 px-2 py-[5px] clip-notch-sm text-sm',
+              'grid grid-cols-[20px_16px_minmax(0,1fr)_56px_62px] sm:grid-cols-[24px_18px_minmax(0,1fr)_66px_66px_78px] items-center gap-1.5 sm:gap-2 px-2 py-[5px] clip-notch-sm text-sm',
               highlighted ? 'bg-gold/15 border border-gold/50' : 'bg-black/25 border border-transparent'
             )}
           >
@@ -66,9 +66,10 @@ export function HighScoreList({ scores, limit = 8, highlightScore, activeProfile
               {s.userName ?? s.name}
             </span>
             <span className="text-faint text-[10px] text-right whitespace-nowrap">
-              W{s.wave} / L{s.level}
+              <span className="sm:hidden">W{s.wave}/L{s.level}</span>
+              <span className="hidden sm:inline">W{s.wave} / L{s.level}</span>
             </span>
-            <span className="text-parch/80 text-[10px] font-bold tabular-nums text-right">
+            <span className="text-parch/80 text-[10px] font-bold tabular-nums text-right hidden sm:block">
               {formatTime(s.durationSeconds)}
             </span>
             <span className="font-display font-black text-goldbright tabular-nums text-right shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">

@@ -36,8 +36,8 @@ export function ShopOverlay({ data, onBuy, onToggleLock, onOpenIndex, onReroll, 
   const lockedCount = data.items.filter((s) => s.locked && !s.sold).length;
 
   return (
-    <div className="absolute inset-0 z-40 flex items-start sm:items-center justify-center overflow-y-auto bg-abyss/80 px-3 py-4">
-      <div className="market-stage relative w-full max-w-6xl anim-fade-up rounded-xl border border-gold/25 shadow-[0_30px_80px_rgba(0,0,0,0.65)] overflow-hidden">
+    <div className="absolute inset-0 z-40 flex items-start justify-center overflow-y-auto bg-abyss/80 px-3 py-4">
+      <div className="market-stage relative w-full max-w-6xl my-auto anim-fade-up rounded-xl border border-gold/25 shadow-[0_30px_80px_rgba(0,0,0,0.65)] overflow-hidden">
         <div className="market-awning" />
         {/* floating embers */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>

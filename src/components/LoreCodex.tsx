@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CLASSES } from '../game/data';
 import { LORE } from '../game/lore';
 import { WEAPON_ARCHETYPES } from '../game/weapons';
@@ -8,15 +8,14 @@ import { cn } from '../utils/cn';
 interface Props {
   initialClassId?: string;
   unlocked: string[];
+  isTouch: boolean;
   onClose: () => void;
 }
 
-export function LoreCodex({ initialClassId, unlocked, onClose }: Props) {
+export function LoreCodex({ initialClassId, unlocked, isTouch, onClose }: Props) {
   const startIdx = Math.max(0, CLASSES.findIndex((c) => c.id === (initialClassId ?? CLASSES[0].id)));
   const [idx, setIdx] = useState(startIdx);
   const [dir, setDir] = useState<1 | -1>(1);
-  const wheelLock = useRef(0);
-  const touchY = useRef<number | null>(null);
 
   const go = useCallback(
     (next: number) => {
@@ -29,26 +28,6 @@ export function LoreCodex({ initialClassId, unlocked, onClose }: Props) {
     },
     []
   );
-
-  // mouse wheel / trackpad scrolls between legends
-  const onWheel = (e: React.WheelEvent) => {
-    if (Math.abs(e.deltaY) < 4) return;
-    const now = Date.now();
-    if (now < wheelLock.current) return;
-    wheelLock.current = now + 260;
-    go(idx + (e.deltaY > 0 ? 1 : -1));
-  };
-
-  // vertical swipe on touch
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchY.current = e.touches[0].clientY;
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchY.current === null) return;
-    const dy = touchY.current - e.changedTouches[0].clientY;
-    if (Math.abs(dy) > 48) go(idx + (dy > 0 ? 1 : -1));
-    touchY.current = null;
-  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -70,19 +49,15 @@ export function LoreCodex({ initialClassId, unlocked, onClose }: Props) {
   const isUnlocked = cls.unlockWave === 0 || unlocked.includes(cls.id);
 
   return (
-    <div
-      className="absolute inset-0 z-[55] flex items-center justify-center bg-abyss/92 p-3 sm:p-6 overflow-hidden"
-      onWheel={onWheel}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="absolute inset-0 z-[55] bg-abyss/92">
       {/* ambient realm glow that shifts with the legend */}
       <div
         className="absolute inset-0 pointer-events-none transition-all duration-700"
         style={{ background: `radial-gradient(ellipse at 70% 40%, ${cls.color}22 0%, transparent 60%)` }}
       />
 
-      <div className="relative w-full max-w-5xl">
+      <div className="absolute inset-0 overflow-y-auto overscroll-contain p-3 sm:p-6">
+      <div className="relative w-full max-w-5xl mx-auto">
         <div className="flex items-end justify-between gap-3 mb-3">
           <div>
             <div className="font-display text-[10px] tracking-[0.5em] text-gold">LEGEND SAGAS</div>
@@ -103,7 +78,7 @@ export function LoreCodex({ initialClassId, unlocked, onClose }: Props) {
 
         <div className="grid lg:grid-cols-[210px_1fr] gap-3">
           {/* vertical legend wheel */}
-          <div className="relative">
+          <div className="relative min-w-0">
             <div className="hidden lg:flex flex-col gap-1.5 relative">
               {CLASSES.map((c, n) => {
                 const sel = n === idx;
@@ -137,11 +112,7 @@ export function LoreCodex({ initialClassId, unlocked, onClose }: Props) {
                 );
               })}
               <div className="mt-2 flex items-center gap-2 text-[9px] tracking-[0.2em] text-faint justify-center">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="8" y="3" width="8" height="18" rx="4" />
-                  <path d="M12 7v3" strokeLinecap="round" />
-                </svg>
-                SCROLL TO BROWSE
+                SELECT A LEGEND
               </div>
             </div>
 
@@ -161,7 +132,7 @@ export function LoreCodex({ initialClassId, unlocked, onClose }: Props) {
           </div>
 
           {/* saga page */}
-          <div className="panel-gold clip-notch p-4 sm:p-6 relative overflow-hidden min-h-[430px]">
+          <div className="panel-gold clip-notch p-4 sm:p-6 relative overflow-hidden min-h-[430px] min-w-0">
             <div
               className="absolute -right-10 -top-10 w-64 h-64 rounded-full pointer-events-none transition-all duration-700"
               style={{ background: `radial-gradient(circle, ${cls.color}33 0%, transparent 65%)` }}
@@ -233,8 +204,8 @@ export function LoreCodex({ initialClassId, unlocked, onClose }: Props) {
                   body={`Reach ${cls.range} · ${Math.round((1 / cls.atkCd) * 10) / 10} strikes/s · ${Math.round(cls.crit * 100)}% critical.`}
                   origin={cls.lore}
                 />
-                <AbilityCard kicker="SIGNATURE · E" name={cls.abilityName} color={cls.color} body={cls.abilityDesc} origin={lore.signatureOrigin} cd={cls.abilityCd} />
-                <AbilityCard kicker="LEGACY · Q" name={lore.legacy.name} color={cls.color2} body={lore.legacy.desc} origin={lore.legacy.origin} cd={lore.legacy.cd} />
+                <AbilityCard kicker={isTouch ? 'SIGNATURE' : 'SIGNATURE · E'} name={cls.abilityName} color={cls.color} body={cls.abilityDesc} origin={lore.signatureOrigin} cd={cls.abilityCd} />
+                <AbilityCard kicker={isTouch ? 'LEGACY' : 'LEGACY · Q'} name={lore.legacy.name} color={cls.color2} body={lore.legacy.desc} origin={lore.legacy.origin} cd={lore.legacy.cd} />
               </div>
 
               {!isUnlocked && (
@@ -259,6 +230,7 @@ export function LoreCodex({ initialClassId, unlocked, onClose }: Props) {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

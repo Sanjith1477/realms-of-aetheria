@@ -792,7 +792,7 @@ export class Game {
         this.sfx.play('rune');
         break;
       case 'whetstone':
-        p.critBonus = Math.min(0.7, p.critBonus + 0.07);
+        p.critBonus += 0.07;
         p.dmgMul *= 1.08;
         this.sfx.play('crit');
         break;
@@ -840,9 +840,9 @@ export class Game {
 
   private rarityOdds(level: number): Record<Rarity, number> {
     const raw: Record<Rarity, number> = {
-      common: Math.max(0.2, 0.72 - Math.max(0, level - 1) * 0.035),
-      rare: Math.min(0.4, 0.24 + Math.max(0, level - 1) * 0.009),
-      epic: Math.min(0.32, 0.04 + Math.max(0, level - 1) * 0.018),
+        common: isRarityUnlocked('common', level) ? Math.max(0.2, 0.72 - Math.max(0, level - 1) * 0.035) : 0,
+        rare: isRarityUnlocked('rare', level) ? Math.min(0.4, 0.24 + Math.max(0, level - 1) * 0.009) : 0,
+        epic: isRarityUnlocked('epic', level) ? Math.min(0.32, 0.04 + Math.max(0, level - 1) * 0.018) : 0,
       legendary: isRarityUnlocked('legendary', level) ? Math.min(0.22, Math.max(0, level - 4) * 0.014) : 0,
     };
     const total = raw.common + raw.rare + raw.epic + raw.legendary;
@@ -883,10 +883,7 @@ export class Game {
         // Locked rarities can never enter the pool, regardless of evo affinity
         if (!isRarityUnlocked(power.rarity, level)) return false;
         // If it's a legend-specific evolution power, strictly only offer to its legend
-        if (power.id.startsWith('evo_')) {
-          return power.recommended.includes(cid);
-        }
-        return power.rarity === rarity;
+        return power.rarity === rarity && (!power.id.startsWith('evo_') || power.recommended.includes(cid));
       });
 
       if (!pool.length) {
@@ -952,7 +949,7 @@ export class Game {
         p.speed *= 1.14;
         break;
       case 'precision':
-        p.critBonus = Math.min(0.7, p.critBonus + 0.12);
+        p.critBonus += 0.12;
         break;
       case 'longreach':
         p.rangeBonus += 22;
@@ -1000,7 +997,7 @@ export class Game {
         p.legacyCd = 0;
         break;
       case 'predator_instinct':
-        p.critBonus = Math.min(0.7, p.critBonus + 0.1);
+        p.critBonus += 0.1;
         p.speed *= 1.12;
         p.dmgMul *= 1.1;
         break;
@@ -1011,7 +1008,7 @@ export class Game {
         break;
       case 'death_dealer':
         p.dmgMul *= 1.32;
-        p.critBonus = Math.min(0.7, p.critBonus + 0.08);
+        p.critBonus += 0.08;
         break;
       case 'chronomancer':
         p.abilityRate *= 0.62;
@@ -1025,7 +1022,7 @@ export class Game {
       case 'aetherborn_form':
         p.dmgMul *= 1.42;
         p.speed *= 1.16;
-        p.critBonus = Math.min(0.7, p.critBonus + 0.12);
+        p.critBonus += 0.12;
         p.maxHp += 25;
         p.hp = Math.min(p.maxHp, p.hp + 25);
         break;
@@ -1156,12 +1153,12 @@ export class Game {
     }
   }
 
-  /** Wave-scaled shop odds. Epic unlocks at wave 5, Legendary at wave 10. */
+  /** Wave-scaled shop odds with locked tiers removed before normalization. */
   private shopRarityOdds(wave: number): Record<Rarity, number> {
     const w = Math.max(1, wave);
     const raw: Record<Rarity, number> = {
-      common: Math.max(0.3, 0.68 - w * 0.02),
-      rare: Math.min(0.34, 0.27 + w * 0.004),
+      common: isShopRarityUnlocked('common', w) ? Math.max(0.3, 0.68 - w * 0.02) : 0,
+      rare: isShopRarityUnlocked('rare', w) ? Math.min(0.34, 0.27 + w * 0.004) : 0,
       epic: isShopRarityUnlocked('epic', w) ? Math.min(0.24, 0.1 + (w - 5) * 0.014) : 0,
       legendary: isShopRarityUnlocked('legendary', w) ? Math.min(0.14, 0.04 + (w - 10) * 0.01) : 0,
     };
@@ -1185,7 +1182,7 @@ export class Game {
     while (chosen.length < count && guard++ < 40) {
       const rarity = this.rollShopRarity(wave);
       let pool = SHOP_ITEMS.filter(
-        (item) => item.rarity === rarity && !exclude.has(item.id) && !chosen.some((c) => c.id === item.id)
+        (item) => isShopRarityUnlocked(item.rarity, wave) && item.rarity === rarity && !exclude.has(item.id) && !chosen.some((c) => c.id === item.id)
       );
       if (!pool.length) {
         pool = SHOP_ITEMS.filter(
@@ -1298,9 +1295,11 @@ export class Game {
 
   private difficulty() {
     const progress = Math.max(0, this.wave - 1);
+    const level = this.p?.level ?? 1;
+    const levelPressure = Math.min(0.24, Math.max(0, level - 1) * 0.012);
     return {
-      hp: 1 + progress * 0.24 + Math.pow(progress, 1.36) * 0.038,
-      dmg: 1 + progress * 0.1 + Math.pow(progress, 1.26) * 0.022,
+      hp: (1 + progress * 0.24 + Math.pow(progress, 1.36) * 0.038) * (1 + levelPressure),
+      dmg: (1 + progress * 0.1 + Math.pow(progress, 1.26) * 0.022) * (1 + levelPressure * 0.7),
       speed: 1 + Math.min(0.52, progress * 0.028),
       elites: Math.min(0.38, 0.075 + progress * 0.02),
       activeCap: Math.min(34, 13 + Math.floor(this.wave * 1.3)),

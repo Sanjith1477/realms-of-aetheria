@@ -10,13 +10,13 @@ function check(name: string, ok: boolean, detail = '') {
 }
 
 // ---- rarityOdds: single source of truth ----
-for (const level of [1, 2, 3, 4]) {
+for (const level of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
   const odds = (g as any).rarityOdds(level) as Record<Rarity, number>;
   const sum = odds.common + odds.rare + odds.epic + odds.legendary;
   check(`Lv${level} odds sum to 1`, Math.abs(sum - 1) < 1e-9, `sum=${sum.toFixed(6)}`);
   check(`Lv${level} legendary odds = 0`, odds.legendary === 0, `legendary=${odds.legendary}`);
 }
-for (const level of [5, 6, 10, 30]) {
+for (const level of [10, 12, 30]) {
   const odds = (g as any).rarityOdds(level) as Record<Rarity, number>;
   check(`Lv${level} legendary odds > 0`, odds.legendary > 0, `legendary=${(odds.legendary * 100).toFixed(2)}%`);
 }
@@ -27,7 +27,7 @@ console.log(`Lv4 displayed odds: COMMON ${Math.round(lv4.common * 100)}% RARE ${
 const N = 1000;
 for (const classDef of CLASSES) {
   (g as any).classDef = classDef;
-  for (const level of [1, 2, 3, 4]) {
+  for (const level of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
     let legendaryCount = 0;
     let total = 0;
     for (let i = 0; i < N; i++) {
@@ -43,21 +43,25 @@ for (const classDef of CLASSES) {
   }
 }
 
-// ---- rollPowers at level 5+: legendary becomes reachable ----
+// ---- rollPowers at level 10+: legendary becomes reachable ----
 for (const classDef of CLASSES) {
   (g as any).classDef = classDef;
   let legendaryCount = 0;
   for (let i = 0; i < 2000; i++) {
-    const choices = (g as any).rollPowers(5) as { rarity: Rarity }[];
+    const choices = (g as any).rollPowers(10) as { rarity: Rarity }[];
     for (const c of choices) if (c.rarity === 'legendary') legendaryCount++;
   }
-  check(`${classDef.id} Lv5: legendary can appear`, legendaryCount > 0, `legendary=${legendaryCount}/6000`);
+  check(`${classDef.id} Lv10: legendary can appear`, legendaryCount > 0, `legendary=${legendaryCount}/6000`);
 }
 
 // ---- isRarityUnlocked contract ----
-check('isRarityUnlocked legendary Lv4 = false', isRarityUnlocked('legendary', 4) === false);
-check('isRarityUnlocked legendary Lv5 = true', isRarityUnlocked('legendary', 5) === true);
-check('isRarityUnlocked common/rare/epic always true', ['common', 'rare', 'epic'].every((r) => isRarityUnlocked(r as Rarity, 1)));
+check('isRarityUnlocked rare Lv2 = false', isRarityUnlocked('rare', 2) === false);
+check('isRarityUnlocked rare Lv3 = true', isRarityUnlocked('rare', 3) === true);
+check('isRarityUnlocked epic Lv5 = false', isRarityUnlocked('epic', 5) === false);
+check('isRarityUnlocked epic Lv6 = true', isRarityUnlocked('epic', 6) === true);
+check('isRarityUnlocked legendary Lv9 = false', isRarityUnlocked('legendary', 9) === false);
+check('isRarityUnlocked legendary Lv10 = true', isRarityUnlocked('legendary', 10) === true);
+check('isRarityUnlocked common Lv1 = true', isRarityUnlocked('common', 1) === true);
 
 // ---- power pool sanity: every power's rarity obeys the filter ----
 const legendaries = POWERS.filter((p) => p.rarity === 'legendary');
@@ -70,7 +74,12 @@ for (const wave of [1, 2, 3, 4]) {
     const offers = (g as any).rollShopOffers(wave, new Set<ShopItemId>(), 4) as { rarity: Rarity }[];
     for (const o of offers) { if (o.rarity === 'epic') epic++; if (o.rarity === 'legendary') legendary++; }
   }
-  check(`shop wave ${wave}: no epic/legendary`, epic === 0 && legendary === 0, `epic=${epic} legendary=${legendary}`);
+  check(`shop wave ${wave}: no locked epic/legendary`, epic === 0 && legendary === 0, `epic=${epic} legendary=${legendary}`);
+}
+{
+  let rare = 0;
+  for (let i = 0; i < 300; i++) for (const o of (g as any).rollShopOffers(3, new Set<ShopItemId>(), 4) as { rarity: Rarity }[]) if (o.rarity === 'rare') rare++;
+  check('shop wave 3: rare can appear', rare > 0, `rare=${rare}`);
 }
 {
   // heavily-excluded wave-1 shop must still not fall back to locked rarities

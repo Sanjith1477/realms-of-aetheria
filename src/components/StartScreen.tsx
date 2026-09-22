@@ -23,6 +23,7 @@ interface Props {
   onOpenPatchNotes: () => void;
   onOpenTutorial: () => void;
   onOpenIndex: () => void;
+  isTouch: boolean;
   onClassChange: (classId: string) => void;
   onStart: (classId: string) => void;
 }
@@ -49,7 +50,7 @@ function NavBtn({ onClick, children, badge, title }: { onClick: () => void; chil
 
 export function StartScreen({
   scores, profiles, activeProfile, version, hasNewPatch, onlineCount, cloud, events,
-  onOpenProfile, onOpenSettings, onOpenCodex, onOpenPatchNotes, onOpenTutorial, onOpenIndex, onClassChange, onStart,
+  onOpenProfile, onOpenSettings, onOpenCodex, onOpenPatchNotes, onOpenTutorial, onOpenIndex, isTouch, onClassChange, onStart,
 }: Props) {
   const initialClass = activeProfile.unlockedClasses?.includes(activeProfile.preferredClass) ? activeProfile.preferredClass : CLASSES[0].id;
   const [classId, setClassId] = useState(initialClass);
@@ -258,7 +259,7 @@ export function StartScreen({
             <div className="mt-4 grid sm:grid-cols-2 gap-2">
               <div className="panel clip-notch-sm p-2.5 border-l-2" style={{ borderLeftColor: cls.color }}>
                 <div className="flex items-baseline justify-between">
-                  <span className="font-display text-[9px] tracking-[0.28em]" style={{ color: cls.color }}>SIGNATURE · E</span>
+                  <span className="font-display text-[9px] tracking-[0.28em]" style={{ color: cls.color }}>{isTouch ? 'SIGNATURE' : 'SIGNATURE · E'}</span>
                   <span className="text-[9px] text-faint font-bold">{cls.abilityCd}s</span>
                 </div>
                 <div className="font-display font-bold text-sm text-parch mt-0.5">{cls.abilityName}</div>
@@ -266,7 +267,7 @@ export function StartScreen({
               </div>
               <div className="panel clip-notch-sm p-2.5 border-l-2" style={{ borderLeftColor: cls.color2 }}>
                 <div className="flex items-baseline justify-between">
-                  <span className="font-display text-[9px] tracking-[0.28em]" style={{ color: cls.color2 }}>LEGACY · Q</span>
+                  <span className="font-display text-[9px] tracking-[0.28em]" style={{ color: cls.color2 }}>{isTouch ? 'LEGACY' : 'LEGACY · Q'}</span>
                   <span className="text-[9px] text-faint font-bold">{lore.legacy.cd}s</span>
                 </div>
                 <div className="font-display font-bold text-sm text-parch mt-0.5">{lore.legacy.name}</div>

@@ -138,6 +138,7 @@ export default function App() {
       },
     });
     gameRef.current = game;
+    (window as unknown as Record<string, unknown>).__game = game; // TEMP: bot playtest hook, remove before ship
     return () => {
       game.destroy();
       gameRef.current = null;
@@ -264,6 +265,18 @@ export default function App() {
       tutorialDone = localStorage.getItem(`aetheria-tutorial-${activeProfile.id}`) === 'done';
     } catch {
       /* ignore */
+    }
+    // A profile that already has progress is a returning player: never re-show the
+    // tutorial just because this browser/device has no local "seen" flag yet.
+    const hasProgress =
+      (activeProfile.bestWave ?? 0) > 0 || (activeProfile.bestScore ?? 0) > 0 || (activeProfile.runs ?? 0) > 0;
+    if (!tutorialDone && hasProgress) {
+      tutorialDone = true;
+      try {
+        localStorage.setItem(`aetheria-tutorial-${activeProfile.id}`, 'done');
+      } catch {
+        /* ignore */
+      }
     }
     if (!tutorialDone) {
       setTutorialOpen(true);
@@ -723,6 +736,7 @@ export default function App() {
           onOpenIndex={() => setIndexTab('powers')}
           onOpenPatchNotes={openPatchNotes}
           onOpenTutorial={() => setTutorialOpen(true)}
+          isTouch={isTouch}
           onClassChange={rememberClass}
           onStart={startGame}
         />
@@ -785,7 +799,7 @@ export default function App() {
       )}
 
       {screen === 'menu' && codexClass && activeProfile && (
-        <LoreCodex initialClassId={codexClass} unlocked={activeProfile.unlockedClasses ?? ['kensei']} onClose={() => setCodexClass(null)} />
+        <LoreCodex initialClassId={codexClass} unlocked={activeProfile.unlockedClasses ?? ['kensei']} isTouch={isTouch} onClose={() => setCodexClass(null)} />
       )}
 
       {patchOpen && (screen === 'menu' || screen === 'paused') && (

@@ -26,7 +26,7 @@ export function LevelUpOverlay({ data, onChoose, onOpenIndex, onReroll }: Props)
     <div className="absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-abyss/75 px-3 py-5">
       {/* soft radial glow behind the cards */}
       <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 42%, rgba(226,180,92,0.10), transparent 60%)' }} />
-      <div className="relative w-full max-w-4xl text-center anim-fade-up">
+      <div className="relative w-full max-w-4xl text-center anim-fade-up my-auto">
         <div className="flex items-center justify-center gap-3">
           <span className="hidden sm:block h-px w-16 bg-gradient-to-r from-transparent to-gold/50" />
           <div className="font-display text-[10px] font-bold tracking-[0.5em] text-gold">AETHER AWAKENS</div>
