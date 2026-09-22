@@ -9,6 +9,7 @@ import {
   SHOP_ITEMS,
   capStackCount,
   getPowerStackCap,
+  isPowerAvailable,
   getShopItemStackCap,
   isRarityUnlocked,
   isShopRarityUnlocked,
@@ -742,7 +743,7 @@ export class Game {
   choosePower(id: PowerId): boolean {
     const p = this.p;
     const power = this.levelChoices.find((choice) => choice.id === id);
-    if (!p || this.state !== 'levelup' || !power) return false;
+    if (!p || this.state !== 'levelup' || !power || !isPowerAvailable(power.id, p.ownedPowerIds)) return false;
     this.applyPower(power.id);
     this.pendingLevels--;
     this.sfx.play('rune');
@@ -842,8 +843,8 @@ export class Game {
   private describePowerValue(power: PowerDef, count: number): string {
     switch (power.id) {
       case 'veteran_reach': {
-        const reach = 12 * count;
-        const damage = (Math.pow(1.08, count) * 100 - 100);
+        const reach = 26 * count;
+        const damage = (Math.pow(1.12, count) * 100 - 100);
         return `Weapon Reach: +${reach} · Weapon Damage: +${damage.toFixed(0)}%`;
       }
       case 'keen_edge':
@@ -1022,12 +1023,9 @@ export class Game {
     return normalizeRarityWeights(raw);
   }
 
-  private rollRarity(level: number): Rarity {
-    return weightedRandomRarity(this.rarityOdds(level));
-  }
-
   private rollPowers(level: number): PowerDef[] {
     const cid = this.classDef.id;
+    const ownedPowerIds = this.p?.ownedPowerIds ?? [];
     const chosen: PowerDef[] = [];
     // Categories to ensure variety across offense, defense/sustain, utility/mobility, and archetype evolution
     const usedCategories = new Set<string>();
@@ -1044,10 +1042,24 @@ export class Game {
     let attempts = 0;
     while (chosen.length < 3 && attempts < 60) {
       attempts++;
-      const rarity = this.rollRarity(level);
+      const baseOdds = this.rarityOdds(level);
+      const availableOdds: Record<Rarity, number> = {
+        common: 0,
+        rare: 0,
+        epic: 0,
+        legendary: 0,
+      };
+      for (const candidate of POWERS) {
+        if (chosen.some((c) => c.id === candidate.id) || !isPowerAvailable(candidate.id, ownedPowerIds)) continue;
+        if (!isRarityUnlocked(candidate.rarity, level)) continue;
+        if (candidate.id.startsWith('evo_') && !candidate.recommended.includes(cid)) continue;
+        availableOdds[candidate.rarity] = baseOdds[candidate.rarity];
+      }
+      const rarity = weightedRandomRarity(normalizeRarityWeights(availableOdds));
       // Priority weighting: legend-specific evolutions have high affinity for that legend
       let pool = POWERS.filter((power) => {
         if (chosen.some((c) => c.id === power.id)) return false;
+        if (!isPowerAvailable(power.id, ownedPowerIds)) return false;
         // Locked rarities can never enter the pool, regardless of evo affinity
         if (!isRarityUnlocked(power.rarity, level)) return false;
         // If it's a legend-specific evolution power, strictly only offer to its legend
@@ -1057,6 +1069,7 @@ export class Game {
       if (!pool.length) {
         pool = POWERS.filter((power) => {
           if (chosen.some((c) => c.id === power.id)) return false;
+          if (!isPowerAvailable(power.id, ownedPowerIds)) return false;
           if (!isRarityUnlocked(power.rarity, level)) return false;
           if (power.id.startsWith('evo_')) return power.recommended.includes(cid);
           return true;
@@ -1077,7 +1090,7 @@ export class Game {
 
     // Safety fallback (still restricted to unlocked rarities)
     while (chosen.length < 3) {
-      const fallback = POWERS.find((pow) => !chosen.some((c) => c.id === pow.id) && (!pow.id.startsWith('evo_') || pow.recommended.includes(cid)) && isRarityUnlocked(pow.rarity, level));
+      const fallback = POWERS.find((pow) => !chosen.some((c) => c.id === pow.id) && isPowerAvailable(pow.id, ownedPowerIds) && (!pow.id.startsWith('evo_') || pow.recommended.includes(cid)) && isRarityUnlocked(pow.rarity, level));
       if (fallback) chosen.push(fallback);
       else break;
     }
@@ -1157,8 +1170,8 @@ export class Game {
         break;
       }
       case 'veteran_reach':
-        p.rangeBonus += 30;
-        p.dmgMul *= 1.15;
+        p.rangeBonus += 26;
+        p.dmgMul *= 1.12;
         p.rangeTier += 2;
         break;
       case 'blood_harvest':

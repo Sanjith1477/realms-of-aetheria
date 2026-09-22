@@ -390,9 +390,9 @@ export const RARITY_META: Record<Rarity, { label: string; color: string; weight:
 };
 
 /** Single source of truth for rarity unlock gating. */
-export const RARE_UNLOCK_LEVEL = 4;
-export const EPIC_UNLOCK_LEVEL = 8;
-export const LEGENDARY_UNLOCK_LEVEL = 14;
+export const RARE_UNLOCK_LEVEL = 5;
+export const EPIC_UNLOCK_LEVEL = 10;
+export const LEGENDARY_UNLOCK_LEVEL = 18;
 export const SHOP_RARE_UNLOCK_WAVE = 5;
 export const SHOP_EPIC_UNLOCK_WAVE = 10;
 export const SHOP_LEGENDARY_UNLOCK_WAVE = 18;
@@ -447,21 +447,56 @@ export const POWER_STACK_LIMITS: Partial<Record<PowerId, number>> = {
   veteran_reach: 3,
   blood_harvest: 3,
   astral_echo: 2,
-  predator_instinct: 3,
+  predator_instinct: 2,
   colossus_soul: 2,
-  death_dealer: 2,
-  chronomancer: 2,
-  royal_treasury: 2,
-  aetherborn_form: 2,
-  undying_legend: 2,
-  piercing_edge: 2,
+  death_dealer: 1,
+  chronomancer: 1,
+  royal_treasury: 1,
+  aetherborn_form: 1,
+  undying_legend: 1,
+  piercing_edge: 1,
   kinetic_knockback: 3,
   frenzy_momentum: 3,
+  impact_shockwave: 1,
+  bouncing_blades: 1,
+  echo_slash: 1,
+  chain_arc: 1,
+  terminal_blast: 1,
+  evo_kensei_crescent: 1,
+  evo_kensei_petalstorm: 1,
+  evo_kensei_raincutter: 1,
+  evo_shield_frostwave: 1,
+  evo_shield_runicthorns: 1,
+  evo_shield_glaciermaster: 1,
+  evo_jaguar_spears: 1,
+  evo_jaguar_pyramidrite: 1,
+  evo_jaguar_fifthsunborn: 1,
+  evo_sand_split: 1,
+  evo_sand_vortex: 1,
+  evo_sand_dunelord: 1,
+  evo_tide_boomerang: 1,
+  evo_tide_pearlsurge: 1,
+  evo_tide_oceanmonarch: 1,
+  evo_rift_echoes: 1,
+  evo_rift_stasisdoubler: 1,
+  evo_rift_unwrittenvoid: 1,
+  evo_storm_chainbolt: 1,
+  evo_storm_skysmite: 1,
+  evo_storm_firststormlord: 1,
+  evo_drake_firewave: 1,
+  evo_drake_pyreburst: 1,
+  evo_drake_firstflameavatar: 1,
 };
 
 export function getPowerStackCap(powerId: PowerId | string): number | null {
   const cap = POWER_STACK_LIMITS[powerId as PowerId];
   return typeof cap === 'number' ? cap : null;
+}
+
+export function isPowerAvailable(powerId: PowerId, ownedPowerIds: PowerId[]): boolean {
+  const cap = getPowerStackCap(powerId);
+  if (cap === null) return true;
+  return ownedPowerIds.filter((ownedId) => ownedId === powerId).length < cap;
 }
 
 export const POWERS: PowerDef[] = [
@@ -505,7 +540,7 @@ export const POWERS: PowerDef[] = [
     id: 'longreach',
     name: 'Long Reach',
     kicker: 'TECHNIQUE',
-    desc: '+18 weapon reach. Control a wider arc.',
+    desc: '+22 weapon reach. Control a wider arc.',
     color: '#d7adff',
     icon: 'reach',
     rarity: 'common', recommended: ['shieldthane', 'tidecaller', 'sandseer'], stacks: 'Additive · repeatable',
@@ -567,7 +602,7 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'veteran_reach', name: "Veteran's Reach", kicker: 'TECHNIQUE',
-    desc: '+12 weapon reach and +8% weapon damage.', color: '#bfa0ff', icon: 'reach',
+    desc: '+26 weapon reach and +12% weapon damage.', color: '#bfa0ff', icon: 'reach',
     rarity: 'rare', recommended: ['shieldthane', 'sandseer', 'tidecaller'], stacks: 'Reach additive, damage multiplicative, capped at 3',
   },
   {
@@ -583,7 +618,7 @@ export const POWERS: PowerDef[] = [
   {
     id: 'predator_instinct', name: 'Predator Instinct', kicker: 'HUNTER',
     desc: '+10% critical chance, +12% speed and +10% damage.', color: '#f0c85f', icon: 'eye',
-    rarity: 'epic', recommended: ['jaguar', 'kensei', 'riftblade'], stacks: 'Mixed bonuses · repeatable',
+    rarity: 'epic', recommended: ['jaguar', 'kensei', 'riftblade'], stacks: 'Mixed bonuses · max 2',
   },
   {
     id: 'colossus_soul', name: 'Colossus Soul', kicker: 'FORTRESS',
@@ -593,27 +628,27 @@ export const POWERS: PowerDef[] = [
   {
     id: 'death_dealer', name: 'Death Dealer', kicker: 'ANNIHILATION',
     desc: '+32% weapon damage and +8% critical chance.', color: '#ff6d67', icon: 'blade',
-    rarity: 'epic', recommended: ['kensei', 'jaguar', 'riftblade'], stacks: 'Damage multiplicative · crit additive',
+    rarity: 'epic', recommended: ['kensei', 'jaguar', 'riftblade'], stacks: 'Damage multiplicative · one-time',
   },
   {
     id: 'chronomancer', name: 'Chronomancer', kicker: 'TIME',
     desc: 'All ability cooldowns are 38% shorter and dash cooldown is reduced.', color: '#8fe7ff', icon: 'sun',
-    rarity: 'legendary', recommended: ['sandseer', 'riftblade', 'tidecaller'], stacks: 'Multiplicative cooldown · repeatable',
+    rarity: 'legendary', recommended: ['sandseer', 'riftblade', 'tidecaller'], stacks: 'Multiplicative cooldown · one-time',
   },
   {
     id: 'royal_treasury', name: 'Royal Treasury', kicker: 'FORTUNE',
     desc: 'Double coin value, greatly widen pickup range and gain +16% damage.', color: '#ffd24a', icon: 'coin',
-    rarity: 'legendary', recommended: ['sandseer', 'tidecaller'], stacks: 'Fortune additive · damage multiplicative',
+    rarity: 'legendary', recommended: ['sandseer', 'tidecaller'], stacks: 'Fortune additive · damage multiplicative · one-time',
   },
   {
     id: 'aetherborn_form', name: 'Aetherborn Form', kicker: 'TRANSCENDENCE',
     desc: '+42% damage, +16% speed, +12% critical chance and +25 max health.', color: '#ffdf8a', icon: 'sun',
-    rarity: 'legendary', recommended: ['kensei', 'jaguar', 'riftblade'], stacks: 'All bonuses stack',
+    rarity: 'legendary', recommended: ['kensei', 'jaguar', 'riftblade'], stacks: 'All bonuses · one-time',
   },
   {
     id: 'undying_legend', name: 'Undying Legend', kicker: 'IMMORTALITY',
     desc: '+35 max health, heal 6 per kill and take 15% less damage.', color: '#a8ffd1', icon: 'shield',
-    rarity: 'legendary', recommended: ['shieldthane', 'tidecaller', 'jaguar'], stacks: 'Health/lifesteal additive · armor max 65%',
+    rarity: 'legendary', recommended: ['shieldthane', 'tidecaller', 'jaguar'], stacks: 'Health/lifesteal additive · armor max 65% · one-time',
   },
   // Mechanical archetype powers
   {
