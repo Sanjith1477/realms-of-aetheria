@@ -25,6 +25,7 @@ import {
 import { SFX } from './audio';
 import { Music } from './music';
 import { legacyFor, type LegacyDef } from './lore';
+import { heroBasePower, waveDifficulty, type HeroCombatStats, type WaveDifficulty } from './difficulty';
 
 export type GameState = 'menu' | 'playing' | 'paused' | 'levelup' | 'shop' | 'dying' | 'over';
 
@@ -388,6 +389,8 @@ export class Game {
   private shopPurchaseCounts = new Map<ShopItemId, number>();
   private powerRerolls = 3;
   private shopRerolls = 3;
+  private expectedHeroPower = 1;
+  private waveDifficulty: WaveDifficulty = waveDifficulty(1, 1, 1);
 
   private feed: FeedMsg[] = [];
   private feedId = 0;
@@ -600,6 +603,8 @@ export class Game {
       frenzyT: 0,
       dead: false,
     };
+    this.expectedHeroPower = this.currentHeroPower();
+    this.waveDifficulty = waveDifficulty(this.expectedHeroPower, this.expectedHeroPower, 1);
     this.legacy = legacyFor(cls.id);
     this.decoy = null;
     this.stasisHits = [];
@@ -1474,24 +1479,30 @@ export class Game {
     return Math.min(0.85, this.classDef.crit + p.critBonus);
   }
 
-  private difficulty() {
-    const progress = Math.max(0, this.wave - 1);
-    const level = this.p?.level ?? 1;
-    const levelPressure = Math.min(0.24, Math.max(0, level - 1) * 0.012);
-    return {
-      hp: (1 + progress * 0.24 + Math.pow(progress, 1.36) * 0.038) * (1 + levelPressure),
-      dmg: (1 + progress * 0.1 + Math.pow(progress, 1.26) * 0.022) * (1 + levelPressure * 0.7),
-      speed: 1 + Math.min(0.52, progress * 0.028),
-      elites: Math.min(0.38, 0.075 + progress * 0.02),
-      activeCap: Math.min(34, 13 + Math.floor(this.wave * 1.3)),
-      spawnGap: Math.max(0.16, 1.12 - this.wave * 0.06),
+  private currentHeroPower() {
+    const p = this.p!;
+    const stats: HeroCombatStats = {
+      baseDamage: this.classDef.dmg,
+      attackCooldown: this.classDef.atkCd,
+      damageMultiplier: p.dmgMul,
+      attackRateMultiplier: 1 / p.attackRate,
+      critChance: this.critChance(),
+      maxHealth: p.maxHp,
+      armor: p.armor,
+      movementSpeed: p.speed,
     };
+    return heroBasePower(stats);
+  }
+
+  private difficulty() {
+    return this.waveDifficulty;
   }
 
   /* ------------------------------- waves ----------------------------- */
 
   private startWave(n: number) {
     this.wave = n;
+    this.waveDifficulty = waveDifficulty(this.currentHeroPower(), this.expectedHeroPower, n);
     this.zone = ZONES[(n - 1) % ZONES.length];
     const comp = waveComposition(n);
     const q: EnemyKind[] = [];
@@ -1557,9 +1568,12 @@ export class Game {
       dead: false,
     };
     if (kind === 'boss') {
-      e.hp = (def.hp + this.wave * 135) * (1 + Math.max(0, this.wave - 5) * 0.09);
+      e.hp = def.hp * this.waveDifficulty.bossHp;
       e.maxHp = e.hp;
-      e.dmg = def.dmg * dmgMul * (1 + Math.max(0, this.wave - 5) * 0.02);
+      e.dmg = def.dmg * this.waveDifficulty.bossDmg;
+      e.speed *= this.waveDifficulty.bossSpeed;
+      e.shootT *= this.waveDifficulty.bossAttackGap;
+      e.minionT = this.waveDifficulty.bossMinionGap;
     }
     if (kind === 'dragon') {
       this.sfx.play('dragonroar');
@@ -2941,7 +2955,7 @@ export class Game {
           e.minionT -= dt;
           const v = e.variant ?? 0;
           if (e.minionT <= 0 && this.enemies.length < this.difficulty().activeCap - 3) {
-            e.minionT = Math.max(5.6, 9 - this.wave * 0.22);
+            e.minionT = this.waveDifficulty.bossMinionGap;
             const minionPool: EnemyKind[] = this.wave >= 20
               ? ['husk', 'skitter', 'mage', 'wraith']
               : this.wave >= 10 ? ['husk', 'skitter', 'mage'] : ['husk', 'skitter'];
@@ -3050,7 +3064,7 @@ export class Game {
       // contact damage (always measured against the real player, not the mirage)
       const dp = Math.hypot(p.x - e.x, p.y - e.y);
       if (interact && dp < e.r + p.r + 2 && e.atkCd <= 0) {
-        e.atkCd = Math.max(0.55, 0.9 - this.wave * 0.018);
+        e.atkCd = Math.max(0.55, (0.9 - this.wave * 0.018) / Math.min(1.25, this.waveDifficulty.dmg));
         this.damagePlayer(e.dmg, e);
       }
     }
