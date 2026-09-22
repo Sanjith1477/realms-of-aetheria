@@ -7,6 +7,9 @@ import {
   STREAKS,
   POWERS,
   SHOP_ITEMS,
+  capStackCount,
+  getPowerStackCap,
+  getShopItemStackCap,
   isRarityUnlocked,
   isShopRarityUnlocked,
   type ClassDef,
@@ -381,6 +384,7 @@ export class Game {
   private shopItems: ShopItemDef[] = [];
   private shopSold = new Set<ShopItemId>();
   private shopLocked = new Set<ShopItemId>();
+  private shopPurchaseCounts = new Map<ShopItemId, number>();
   private powerRerolls = 3;
   private shopRerolls = 3;
 
@@ -623,6 +627,7 @@ export class Game {
     this.shopItems = [];
     this.shopSold.clear();
     this.shopLocked.clear();
+    this.shopPurchaseCounts.clear();
     this.powerRerolls = 3;
     this.shopRerolls = 3;
     this.hurtFlash = 0;
@@ -785,26 +790,13 @@ export class Game {
     }
 
     const activeSkills: ActiveSkillSummary[] = POWERS.filter((power) => counts.has(power.id)).map((power) => {
-      const count = counts.get(power.id) ?? 0;
+      const rawCount = counts.get(power.id) ?? 0;
+      const stackCap = getPowerStackCap(power.id);
+      const count = capStackCount(rawCount, stackCap);
       const stackCapMatch = power.stacks.match(/capped at\s+(\d+)/i);
-      const stackCap = stackCapMatch ? Number(stackCapMatch[1]) : null;
-      const valueText = (() => {
-        if (power.id === 'veteran_reach') {
-          const reach = 12 * count;
-          const damage = (Math.pow(1.08, count) * 100 - 100);
-          return `Weapon Reach: +${reach} · Weapon Damage: +${damage.toFixed(0)}%`;
-        }
-        if (power.id === 'keen_edge') return `Weapon Damage: +${((Math.pow(1.22, count) - 1) * 100).toFixed(0)}%`;
-        if (power.id === 'quicksilver') return `Attack Speed: +${((Math.pow(1 / 0.82, count) - 1) * 100).toFixed(0)}%`;
-        if (power.id === 'precision') return `Critical Chance: +${(Math.min(0.85, 0.12 * count) * 100).toFixed(0)}%`;
-        if (power.id === 'wardplate') return `Damage Reduction: +${Math.min(65, 12 * count)}%`;
-        if (power.id === 'ironhide') return `Max Health: +${25 * count}`;
-        if (power.id === 'windstep') return `Movement Speed: +${((Math.pow(1.14, count) - 1) * 100).toFixed(0)}%`;
-        if (power.id === 'sunward') return `Signature Cooldown: -${(Math.max(0, 1 - Math.pow(0.82, count)) * 100).toFixed(0)}%`;
-        if (power.id === 'siphon') return `Lifesteal: +${2 * count} HP/kill`;
-        return power.desc;
-      })();
-      return { id: power.id, name: power.name, rarity: power.rarity, count, valueText, maxStacks: stackCap };
+      const displayedCap = stackCap ?? (stackCapMatch ? Number(stackCapMatch[1]) : null);
+      const valueText = this.describePowerValue(power, count);
+      return { id: power.id, name: power.name, rarity: power.rarity, count, valueText, maxStacks: displayedCap };
     }).sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name));
 
     const buildStats = [
@@ -822,18 +814,17 @@ export class Game {
     ].filter((stat) => stat.value && stat.value !== 'NaN%');
 
     const marketPowerups: MarketplacePowerupSummary[] = [];
-    const soldIds = Array.from(this.shopSold);
-    const seen = new Set<string>();
-    for (const itemId of soldIds) {
+    for (const [itemId, count] of this.shopPurchaseCounts.entries()) {
       const item = SHOP_ITEMS.find((entry) => entry.id === itemId);
-      if (!item || seen.has(itemId)) continue;
-      seen.add(itemId);
+      if (!item) continue;
+      const cappedCount = capStackCount(count, getShopItemStackCap(itemId));
       const remainingSeconds = item.id === 'tonic' ? Math.max(0, p.buffT) : null;
+      if (item.id === 'tonic' && (remainingSeconds === null || remainingSeconds <= 0)) continue;
       marketPowerups.push({
         name: item.name,
         effect: item.desc,
         remainingSeconds,
-        count: 1,
+        count: cappedCount,
       });
     }
     if (p.buffT > 0 && !marketPowerups.some((entry) => entry.name === 'Sun Tonic')) {
@@ -846,6 +837,64 @@ export class Game {
     }
 
     return { activeSkills, totalBuildStats: buildStats, marketplacePowerups: marketPowerups };
+  }
+
+  private describePowerValue(power: PowerDef, count: number): string {
+    switch (power.id) {
+      case 'veteran_reach': {
+        const reach = 12 * count;
+        const damage = (Math.pow(1.08, count) * 100 - 100);
+        return `Weapon Reach: +${reach} · Weapon Damage: +${damage.toFixed(0)}%`;
+      }
+      case 'keen_edge':
+        return `Weapon Damage: +${((Math.pow(1.22, count) - 1) * 100).toFixed(0)}%`;
+      case 'ironhide':
+        return `Max Health: +${25 * count}`;
+      case 'windstep':
+        return `Movement Speed: +${((Math.pow(1.14, count) - 1) * 100).toFixed(0)}%`;
+      case 'precision':
+        return `Critical Chance: +${(Math.min(0.85, 0.12 * count) * 100).toFixed(0)}%`;
+      case 'longreach':
+        return `Weapon Reach: +${22 * count}`;
+      case 'siphon':
+        return `Lifesteal: +${2 * count} HP/kill`;
+      case 'quicksilver':
+        return `Attack Speed: +${((Math.pow(1 / 0.82, count) - 1) * 100).toFixed(0)}%`;
+      case 'sunward':
+        return `Signature Cooldown: -${(Math.max(0, 1 - Math.pow(0.82, count)) * 100).toFixed(0)}%`;
+      case 'gilded_hand':
+        return `Coin Value: +${(Math.min(1, 0.5 * count) * 100).toFixed(0)}%`;
+      case 'wardplate':
+        return `Damage Reduction: +${Math.min(65, 12 * count)}%`;
+      case 'battle_tempo':
+        return `Weapon Damage: +${((Math.pow(1.1, count) * 100) - 100).toFixed(0)}% · Attack Speed: +${((Math.pow(1 / 0.9, count) - 1) * 100).toFixed(0)}%`;
+      case 'titan_blood':
+        return `Max Health: +${Math.round((1.18 ** count - 1) * 100)}%`;
+      case 'blood_harvest':
+        return `Lifesteal: +${4 * count} HP/kill · Weapon Damage: +${((Math.pow(1.1, count) - 1) * 100).toFixed(0)}%`;
+      case 'astral_echo':
+        return `Ability Cooldown: -${(Math.max(0, 1 - Math.pow(0.72, count)) * 100).toFixed(0)}%`;
+      case 'predator_instinct':
+        return `Critical Chance: +${(Math.min(0.3, 0.1 * count) * 100).toFixed(0)}% · Movement Speed: +${((Math.pow(1.12, count) - 1) * 100).toFixed(0)}% · Weapon Damage: +${((Math.pow(1.1, count) - 1) * 100).toFixed(0)}%`;
+      case 'colossus_soul':
+        return `Max Health: +${45 * count} · Damage Reduction: +${Math.min(65, 10 * count)}%`;
+      case 'death_dealer':
+        return `Weapon Damage: +${((Math.pow(1.32, count) - 1) * 100).toFixed(0)}% · Critical Chance: +${(Math.min(0.24, 0.08 * count) * 100).toFixed(0)}%`;
+      case 'chronomancer':
+        return `Ability Cooldown: -${(Math.max(0, 1 - Math.pow(0.62, count)) * 100).toFixed(0)}%`;
+      case 'royal_treasury':
+        return `Coin Value: +${(count * 1).toFixed(0)}x · Weapon Damage: +${((Math.pow(1.16, count) - 1) * 100).toFixed(0)}%`;
+      case 'aetherborn_form':
+        return `Weapon Damage: +${((Math.pow(1.42, count) - 1) * 100).toFixed(0)}% · Movement Speed: +${((Math.pow(1.16, count) - 1) * 100).toFixed(0)}% · Critical Chance: +${(Math.min(0.24, 0.12 * count) * 100).toFixed(0)}%`;
+      case 'undying_legend':
+        return `Max Health: +${35 * count} · Lifesteal: +${6 * count} HP/kill · Damage Reduction: +${Math.min(65, 15 * count)}%`;
+      case 'kinetic_knockback':
+        return `Weapon Damage: +${((Math.pow(1.18, count) - 1) * 100).toFixed(0)}%`;
+      case 'frenzy_momentum':
+        return `Attack Speed: +${Math.min(40, 4 * count)}%`;
+      default:
+        return power.desc;
+    }
   }
 
   toggleLockShopItem(id: ShopItemId): boolean {
@@ -869,8 +918,15 @@ export class Game {
     const p = this.p;
     const item = this.shopItems.find((entry) => entry.id === id);
     if (!p || this.state !== 'shop' || !item || this.shopSold.has(id) || this.gold < item.cost) return false;
+    const currentStacks = this.shopPurchaseCounts.get(id) ?? 0;
+    const stackCap = getShopItemStackCap(id);
+    if (stackCap !== null && currentStacks >= stackCap) {
+      this.pushFeed(`${item.name} is already at max stacks (${stackCap}).`, item.color);
+      return false;
+    }
     this.gold -= item.cost;
     this.shopSold.add(id);
+    this.shopPurchaseCounts.set(id, currentStacks + 1);
     // Buying an item unlocks it automatically.
     this.shopLocked.delete(id);
     switch (id) {
@@ -883,16 +939,18 @@ export class Game {
         this.sfx.play('rune');
         break;
       case 'steel':
-        p.dmgMul *= 1.14;
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) p.dmgMul *= 1.14;
         this.sfx.play('hit');
         break;
       case 'boots':
-        p.speed *= 1.1;
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) p.speed *= 1.1;
         this.sfx.play('dash');
         break;
       case 'ward':
-        p.maxHp += 18;
-        p.hp = Math.min(p.maxHp, p.hp + 18);
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) {
+          p.maxHp += 18;
+          p.hp = Math.min(p.maxHp, p.hp + 18);
+        }
         this.sfx.play('potion');
         break;
       case 'sigil':
@@ -900,22 +958,28 @@ export class Game {
         this.sfx.play('rune');
         break;
       case 'whetstone':
-        p.critBonus += 0.07;
-        p.dmgMul *= 1.08;
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) {
+          p.critBonus += 0.07;
+          p.dmgMul *= 1.08;
+        }
         this.sfx.play('crit');
         break;
       case 'hourglass':
-        p.abilityRate *= 0.86;
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) p.abilityRate *= 0.86;
         this.sfx.play('stillwater');
         break;
       case 'magnet':
-        p.coinMult += 0.5;
-        p.pickupRange += 60;
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) {
+          p.coinMult += 0.5;
+          p.pickupRange += 60;
+        }
         this.sfx.play('coin');
         break;
       case 'elixir':
-        p.maxHp += 20;
-        p.hp = p.maxHp;
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) {
+          p.maxHp += 20;
+          p.hp = p.maxHp;
+        }
         this.sfx.play('potion');
         break;
       case 'prism':
@@ -924,10 +988,12 @@ export class Game {
         this.sfx.play('rune');
         break;
       case 'war_banner':
-        p.dmgMul *= 1.18;
-        p.speed *= 1.1;
-        p.maxHp += 15;
-        p.hp = Math.min(p.maxHp, p.hp + 15);
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) {
+          p.dmgMul *= 1.18;
+          p.speed *= 1.1;
+          p.maxHp += 15;
+          p.hp = Math.min(p.maxHp, p.hp + 15);
+        }
         this.sfx.play('levelup');
         break;
     }
@@ -1039,7 +1105,12 @@ export class Game {
 
   private applyPower(id: PowerId) {
     const p = this.p!;
+    const currentCount = p.ownedPowerIds.filter((ownedId) => ownedId === id).length;
+    const stackCap = getPowerStackCap(id);
+    const nextCount = currentCount + 1;
+    const shouldApply = stackCap === null || capStackCount(nextCount, stackCap) > currentCount;
     p.ownedPowerIds.push(id);
+    if (!shouldApply) return;
     switch (id) {
       case 'keen_edge':
         p.dmgMul *= 1.22;

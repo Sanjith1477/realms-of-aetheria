@@ -423,6 +423,45 @@ export interface PowerDef {
   rarity: Rarity;
   recommended: string[];
   stacks: string;
+  maxStacks?: number;
+}
+
+export function capStackCount(count: number, maxStacks: number | null): number {
+  if (maxStacks === null || maxStacks <= 0) return Math.max(0, count);
+  return Math.min(Math.max(0, count), maxStacks);
+}
+
+export const POWER_STACK_LIMITS: Partial<Record<PowerId, number>> = {
+  keen_edge: 3,
+  ironhide: 4,
+  windstep: 3,
+  precision: 4,
+  longreach: 4,
+  siphon: 3,
+  quicksilver: 3,
+  sunward: 3,
+  gilded_hand: 3,
+  wardplate: 4,
+  battle_tempo: 3,
+  titan_blood: 2,
+  veteran_reach: 3,
+  blood_harvest: 3,
+  astral_echo: 2,
+  predator_instinct: 3,
+  colossus_soul: 2,
+  death_dealer: 2,
+  chronomancer: 2,
+  royal_treasury: 2,
+  aetherborn_form: 2,
+  undying_legend: 2,
+  piercing_edge: 2,
+  kinetic_knockback: 3,
+  frenzy_momentum: 3,
+};
+
+export function getPowerStackCap(powerId: PowerId | string): number | null {
+  const cap = POWER_STACK_LIMITS[powerId as PowerId];
+  return typeof cap === 'number' ? cap : null;
 }
 
 export const POWERS: PowerDef[] = [
@@ -785,6 +824,23 @@ export interface ShopItemDef {
   rarity: Rarity;
   recommended: string[];
   duration: string;
+  maxStacks?: number;
+}
+
+export const SHOP_ITEM_STACK_LIMITS: Partial<Record<ShopItemId, number>> = {
+  tonic: 2,
+  steel: 3,
+  boots: 3,
+  ward: 3,
+  whetstone: 3,
+  hourglass: 2,
+  magnet: 3,
+  war_banner: 2,
+};
+
+export function getShopItemStackCap(itemId: ShopItemId | string): number | null {
+  const cap = SHOP_ITEM_STACK_LIMITS[itemId as ShopItemId];
+  return typeof cap === 'number' ? cap : null;
 }
 
 export const SHOP_ITEMS: ShopItemDef[] = [
