@@ -26,6 +26,7 @@ import { SFX } from './audio';
 import { Music } from './music';
 import { legacyFor, type LegacyDef } from './lore';
 import { heroBasePower, waveDifficulty, type HeroCombatStats, type WaveDifficulty } from './difficulty';
+import { analyzeMovement, BOSS_AIM_TUNING, predictedAim, turnToward, type MovementSample } from './boss-ai';
 
 export type GameState = 'menu' | 'playing' | 'paused' | 'levelup' | 'shop' | 'dying' | 'over';
 
@@ -391,6 +392,7 @@ export class Game {
   private shopRerolls = 3;
   private expectedHeroPower = 1;
   private waveDifficulty: WaveDifficulty = waveDifficulty(1, 1, 1);
+  private playerMovementHistory: MovementSample[] = [];
 
   private feed: FeedMsg[] = [];
   private feedId = 0;
@@ -605,6 +607,7 @@ export class Game {
     };
     this.expectedHeroPower = this.currentHeroPower();
     this.waveDifficulty = waveDifficulty(this.expectedHeroPower, this.expectedHeroPower, 1);
+    this.playerMovementHistory = [{ x: this.p.x, y: this.p.y, vx: 0, vy: 0 }];
     this.legacy = legacyFor(cls.id);
     this.decoy = null;
     this.stasisHits = [];
@@ -1605,6 +1608,32 @@ export class Game {
     }
     if (best) return Math.atan2(best.y - p.y, best.x - p.x);
     return p.facing;
+  }
+
+  private updatePlayerMovementHistory() {
+    const p = this.p;
+    if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return;
+    this.playerMovementHistory.push({ x: p.x, y: p.y, vx: p.vx, vy: p.vy });
+    if (this.playerMovementHistory.length > BOSS_AIM_TUNING.sampleLimit) this.playerMovementHistory.shift();
+  }
+
+  private bossAimAngle(e: Enemy, projectileSpeed: number, predictionStrength = BOSS_AIM_TUNING.predictionStrength) {
+    const p = this.p;
+    if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return e.faceA;
+    const behavior = analyzeMovement(this.playerMovementHistory, e.x, e.y);
+    const target = predictedAim(
+      e.x, e.y, p.x, p.y, behavior, projectileSpeed,
+      BOSS_AIM_TUNING.reactionDelay,
+      BOSS_AIM_TUNING.maxPredictionHorizon,
+      predictionStrength,
+    );
+    const next = turnToward(e.faceA, target, BOSS_AIM_TUNING.turnRate * 0.033);
+    return Number.isFinite(next) ? next : Math.atan2(p.y - e.y, p.x - e.x);
+  }
+
+  private bossAttackAngle(e: Enemy, projectileSpeed: number, predictionStrength = BOSS_AIM_TUNING.predictionStrength) {
+    const aim = this.bossAimAngle(e, projectileSpeed, predictionStrength);
+    return aim + rand(-BOSS_AIM_TUNING.aimError, BOSS_AIM_TUNING.aimError);
   }
 
   private startSwing() {
@@ -2663,6 +2692,7 @@ export class Game {
     }
     p.x = clamp(p.x + p.vx * dt, 26, ARENA_W - 26);
     p.y = clamp(p.y + p.vy * dt, 26, ARENA_H - 26);
+    this.updatePlayerMovementHistory();
     if (mv[0] !== 0 || mv[1] !== 0) {
       p.facing = Math.atan2(mv[1], mv[0]);
       p.runT += dt * (Math.hypot(p.vx, p.vy) / p.speed);
@@ -2777,7 +2807,7 @@ export class Game {
       const d = Math.hypot(dx, dy) || 1;
       const ux = dx / d;
       const uy = dy / d;
-      e.faceA = Math.atan2(dy, dx);
+      if (e.kind !== 'boss') e.faceA = Math.atan2(dy, dx);
       let mx = 0;
       let my = 0;
       const focusSlow = p.focusT > 0 ? 0.32 : 1;
@@ -2954,6 +2984,7 @@ export class Game {
           e.phase += dt;
           e.minionT -= dt;
           const v = e.variant ?? 0;
+          e.faceA = this.bossAimAngle(e, 220, 0.72);
           if (e.minionT <= 0 && this.enemies.length < this.difficulty().activeCap - 3) {
             e.minionT = this.waveDifficulty.bossMinionGap;
             const minionPool: EnemyKind[] = this.wave >= 20
@@ -2994,7 +3025,7 @@ export class Game {
             } else if (v === 1) {
               // Khorzun: triple cinder fans
               e.shootT = 2.8;
-              const base = Math.atan2(uy, ux);
+              const base = this.bossAttackAngle(e, 250, 0.86);
               for (let i = -1; i <= 1; i++) {
                 const a = base + i * 0.3;
                 this.shots.push({ x: e.x + Math.cos(a) * 50, y: e.y + Math.sin(a) * 50, vx: Math.cos(a) * 250, vy: Math.sin(a) * 250, r: 9, dmg: e.dmg * 0.6, life: 3, color: HAZARD_COLOR, from: 'e', pierce: 0 });
@@ -3020,8 +3051,13 @@ export class Game {
             } else {
               // Zar'qun: glass shard cross
               e.shootT = 3.0;
+              const aim = this.bossAttackAngle(e, 260, 0.78);
+              const aimX = Math.cos(aim);
+              const aimY = Math.sin(aim);
               for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-                this.shots.push({ x: e.x + ox * 50, y: e.y + oy * 50, vx: ox * 260 + ux * 60, vy: oy * 260 + uy * 60, r: 8, dmg: e.dmg * 0.6, life: 3, color: HAZARD_COLOR, from: 'e', pierce: 0 });
+                const shardX = ox * aimX - oy * aimY;
+                const shardY = ox * aimY + oy * aimX;
+                this.shots.push({ x: e.x + shardX * 50, y: e.y + shardY * 50, vx: shardX * 260 + aimX * 60, vy: shardY * 260 + aimY * 60, r: 8, dmg: e.dmg * 0.6, life: 3, color: HAZARD_COLOR, from: 'e', pierce: 0 });
               }
               this.sfx.play('shoot');
             }
@@ -3042,8 +3078,9 @@ export class Game {
             if (!e.launched) {
               e.launched = true;
               const lunge = v === 1 ? 760 : 640;
-              e.vx = ux * lunge;
-              e.vy = uy * lunge;
+                const chargeA = this.bossAttackAngle(e, lunge, 0.58);
+                e.vx = Math.cos(chargeA) * lunge;
+                e.vy = Math.sin(chargeA) * lunge;
               this.sfx.play('dash');
               this.shake(5);
             }
