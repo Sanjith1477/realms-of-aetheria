@@ -680,6 +680,7 @@ export default function App() {
   };
 
   const pauseStats = screen === 'paused' ? (gameRef.current?.getStats() ?? null) : null;
+  const pauseData = screen === 'paused' ? (gameRef.current?.getPauseData() ?? null) : null;
 
   return (
     <div className="fixed inset-0 bg-ink overflow-hidden">
@@ -823,12 +824,15 @@ export default function App() {
         />
       )}
 
-      {screen === 'paused' && pauseStats && (
+      {screen === 'paused' && pauseStats && pauseData && (
         <PauseOverlay
           wave={pauseStats.wave}
           score={pauseStats.score}
           scores={scores}
           activeProfileId={activeProfile?.id}
+          skills={pauseData.activeSkills}
+          totalStats={pauseData.totalBuildStats}
+          marketplacePowerups={pauseData.marketplacePowerups}
           onOpenSettings={() => setSettingsOpen(true)}
           onResume={() => gameRef.current?.setPaused(false)}
           onRestart={restart}

@@ -390,12 +390,12 @@ export const RARITY_META: Record<Rarity, { label: string; color: string; weight:
 };
 
 /** Single source of truth for rarity unlock gating. */
-export const RARE_UNLOCK_LEVEL = 3;
-export const EPIC_UNLOCK_LEVEL = 6;
-export const LEGENDARY_UNLOCK_LEVEL = 10;
-export const SHOP_RARE_UNLOCK_WAVE = 3;
-export const SHOP_EPIC_UNLOCK_WAVE = 5;
-export const SHOP_LEGENDARY_UNLOCK_WAVE = 10;
+export const RARE_UNLOCK_LEVEL = 4;
+export const EPIC_UNLOCK_LEVEL = 8;
+export const LEGENDARY_UNLOCK_LEVEL = 14;
+export const SHOP_RARE_UNLOCK_WAVE = 5;
+export const SHOP_EPIC_UNLOCK_WAVE = 10;
+export const SHOP_LEGENDARY_UNLOCK_WAVE = 18;
 
 /** Whether a level-up power rarity is unlocked at the given player level. */
 export function isRarityUnlocked(rarity: Rarity, level: number): boolean {
@@ -528,8 +528,8 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'veteran_reach', name: "Veteran's Reach", kicker: 'TECHNIQUE',
-    desc: '+26 weapon reach and +12% weapon damage.', color: '#bfa0ff', icon: 'reach',
-    rarity: 'rare', recommended: ['shieldthane', 'sandseer', 'tidecaller'], stacks: 'Reach additive, damage multiplicative',
+    desc: '+12 weapon reach and +8% weapon damage.', color: '#bfa0ff', icon: 'reach',
+    rarity: 'rare', recommended: ['shieldthane', 'sandseer', 'tidecaller'], stacks: 'Reach additive, damage multiplicative, capped at 3',
   },
   {
     id: 'blood_harvest', name: 'Blood Harvest', kicker: 'SUSTAIN',

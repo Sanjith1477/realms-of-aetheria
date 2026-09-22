@@ -98,6 +98,27 @@ export interface LevelUpData {
   rerollsLeft: number;
 }
 
+export interface ActiveSkillSummary {
+  id: PowerId;
+  name: string;
+  rarity: Rarity;
+  count: number;
+  valueText: string;
+  maxStacks: number | null;
+}
+
+export interface MarketplacePowerupSummary {
+  name: string;
+  effect: string;
+  remainingSeconds: number | null;
+  count: number;
+}
+
+export interface PauseData {
+  activeSkills: ActiveSkillSummary[];
+  totalBuildStats: { label: string; value: string }[];
+  marketplacePowerups: MarketplacePowerupSummary[];
+}
 
 export interface ShopData {
   wave: number;
@@ -125,6 +146,7 @@ interface Player {
   riteT: number; tideT: number; stasisT: number;
   tempestT: number; tempestTick: number; pyreT: number; pyreTick: number;
   slowT: number;
+  ownedPowerIds: PowerId[];
   // Archetype & Evolution state
   rangeTier: number;
   speedTier: number;
@@ -282,6 +304,7 @@ export interface GameOpts {
 function weightedRandomRarity(odds: Record<Rarity, number>): Rarity {
   const entries = (['legendary', 'epic', 'rare', 'common'] as Rarity[]).filter((r) => odds[r] > 0);
   const total = entries.reduce((sum, r) => sum + odds[r], 0);
+  if (!total) return 'common';
   let roll = Math.random() * total;
   for (const rarity of entries) {
     roll -= odds[rarity];
@@ -290,9 +313,20 @@ function weightedRandomRarity(odds: Record<Rarity, number>): Rarity {
   return entries[entries.length - 1];
 }
 
+function normalizeRarityWeights(raw: Record<Rarity, number>): Record<Rarity, number> {
+  const total = Object.values(raw).reduce((sum, value) => sum + value, 0);
+  if (!total) return { common: 0, rare: 0, epic: 0, legendary: 0 };
+  return {
+    common: raw.common / total,
+    rare: raw.rare / total,
+    epic: raw.epic / total,
+    legendary: raw.legendary / total,
+  };
+}
+
 export class Game {
-  sfx = new SFX();
   music = new Music();
+  sfx = new SFX();
   state: GameState = 'menu';
   muted = false;
   private legacy: LegacyDef = legacyFor('kensei');
@@ -523,6 +557,7 @@ export class Game {
       riteT: 0, tideT: 0, stasisT: 0,
       tempestT: 0, tempestTick: 0, pyreT: 0, pyreTick: 0,
       slowT: 0,
+      ownedPowerIds: [],
       rangeTier: 0,
       speedTier: 0,
       hasEvoCrescent: false,
@@ -740,6 +775,79 @@ export class Game {
     };
   }
 
+  getPauseData(): PauseData | null {
+    const p = this.p;
+    if (!p) return null;
+
+    const counts = new Map<PowerId, number>();
+    for (const id of p.ownedPowerIds) {
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+
+    const activeSkills: ActiveSkillSummary[] = POWERS.filter((power) => counts.has(power.id)).map((power) => {
+      const count = counts.get(power.id) ?? 0;
+      const stackCapMatch = power.stacks.match(/capped at\s+(\d+)/i);
+      const stackCap = stackCapMatch ? Number(stackCapMatch[1]) : null;
+      const valueText = (() => {
+        if (power.id === 'veteran_reach') {
+          const reach = 12 * count;
+          const damage = (Math.pow(1.08, count) * 100 - 100);
+          return `Weapon Reach: +${reach} · Weapon Damage: +${damage.toFixed(0)}%`;
+        }
+        if (power.id === 'keen_edge') return `Weapon Damage: +${((Math.pow(1.22, count) - 1) * 100).toFixed(0)}%`;
+        if (power.id === 'quicksilver') return `Attack Speed: +${((Math.pow(1 / 0.82, count) - 1) * 100).toFixed(0)}%`;
+        if (power.id === 'precision') return `Critical Chance: +${(Math.min(0.85, 0.12 * count) * 100).toFixed(0)}%`;
+        if (power.id === 'wardplate') return `Damage Reduction: +${Math.min(65, 12 * count)}%`;
+        if (power.id === 'ironhide') return `Max Health: +${25 * count}`;
+        if (power.id === 'windstep') return `Movement Speed: +${((Math.pow(1.14, count) - 1) * 100).toFixed(0)}%`;
+        if (power.id === 'sunward') return `Signature Cooldown: -${(Math.max(0, 1 - Math.pow(0.82, count)) * 100).toFixed(0)}%`;
+        if (power.id === 'siphon') return `Lifesteal: +${2 * count} HP/kill`;
+        return power.desc;
+      })();
+      return { id: power.id, name: power.name, rarity: power.rarity, count, valueText, maxStacks: stackCap };
+    }).sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name));
+
+    const buildStats = [
+      { label: 'Weapon Damage', value: `+${((p.dmgMul - 1) * 100).toFixed(0)}%` },
+      { label: 'Weapon Reach', value: `+${Math.round(p.rangeBonus)}` },
+      { label: 'Attack Speed', value: `+${(((1 / p.attackRate) - 1) * 100).toFixed(0)}%` },
+      { label: 'Critical Chance', value: `${(this.critChance() * 100).toFixed(0)}%` },
+      { label: 'Critical Damage', value: 'x2', },
+      { label: 'Movement Speed', value: `+${(((p.speed / this.classDef.speed) - 1) * 100).toFixed(0)}%` },
+      { label: 'Cooldown Reduction', value: `${((1 - p.abilityRate) * 100).toFixed(0)}%` },
+      { label: 'Defense / Armor', value: `${(p.armor * 100).toFixed(0)}%` },
+      { label: 'Max Health', value: `+${Math.max(0, p.maxHp - this.classDef.hp)}` },
+      { label: 'Lifesteal', value: `+${p.lifesteal.toFixed(0)} HP/kill` },
+      { label: 'Pickup Range', value: `+${Math.max(0, p.pickupRange - 120)}` },
+    ].filter((stat) => stat.value && stat.value !== 'NaN%');
+
+    const marketPowerups: MarketplacePowerupSummary[] = [];
+    const soldIds = Array.from(this.shopSold);
+    const seen = new Set<string>();
+    for (const itemId of soldIds) {
+      const item = SHOP_ITEMS.find((entry) => entry.id === itemId);
+      if (!item || seen.has(itemId)) continue;
+      seen.add(itemId);
+      const remainingSeconds = item.id === 'tonic' ? Math.max(0, p.buffT) : null;
+      marketPowerups.push({
+        name: item.name,
+        effect: item.desc,
+        remainingSeconds,
+        count: 1,
+      });
+    }
+    if (p.buffT > 0 && !marketPowerups.some((entry) => entry.name === 'Sun Tonic')) {
+      marketPowerups.push({
+        name: 'Sun Tonic',
+        effect: '+50% damage',
+        remainingSeconds: Math.max(0, p.buffT),
+        count: 1,
+      });
+    }
+
+    return { activeSkills, totalBuildStats: buildStats, marketplacePowerups: marketPowerups };
+  }
+
   toggleLockShopItem(id: ShopItemId): boolean {
     if (this.state !== 'shop') return false;
     const item = this.shopItems.find((entry) => entry.id === id);
@@ -840,18 +948,12 @@ export class Game {
 
   private rarityOdds(level: number): Record<Rarity, number> {
     const raw: Record<Rarity, number> = {
-        common: isRarityUnlocked('common', level) ? Math.max(0.2, 0.72 - Math.max(0, level - 1) * 0.035) : 0,
-        rare: isRarityUnlocked('rare', level) ? Math.min(0.4, 0.24 + Math.max(0, level - 1) * 0.009) : 0,
-        epic: isRarityUnlocked('epic', level) ? Math.min(0.32, 0.04 + Math.max(0, level - 1) * 0.018) : 0,
-      legendary: isRarityUnlocked('legendary', level) ? Math.min(0.22, Math.max(0, level - 4) * 0.014) : 0,
+      common: isRarityUnlocked('common', level) ? Math.max(0.72, 0.9 - Math.max(0, level - 1) * 0.038) : 0,
+      rare: isRarityUnlocked('rare', level) ? Math.max(0.08, 0.22 + Math.max(0, level - 4) * 0.02) : 0,
+      epic: isRarityUnlocked('epic', level) ? Math.max(0.02, 0.05 + Math.max(0, level - 8) * 0.012) : 0,
+      legendary: isRarityUnlocked('legendary', level) ? Math.max(0.01, (level - 13) * 0.008) : 0,
     };
-    const total = raw.common + raw.rare + raw.epic + raw.legendary;
-    return {
-      common: raw.common / total,
-      rare: raw.rare / total,
-      epic: raw.epic / total,
-      legendary: raw.legendary / total,
-    };
+    return normalizeRarityWeights(raw);
   }
 
   private rollRarity(level: number): Rarity {
@@ -937,6 +1039,7 @@ export class Game {
 
   private applyPower(id: PowerId) {
     const p = this.p!;
+    p.ownedPowerIds.push(id);
     switch (id) {
       case 'keen_edge':
         p.dmgMul *= 1.22;
@@ -1157,18 +1260,12 @@ export class Game {
   private shopRarityOdds(wave: number): Record<Rarity, number> {
     const w = Math.max(1, wave);
     const raw: Record<Rarity, number> = {
-      common: isShopRarityUnlocked('common', w) ? Math.max(0.3, 0.68 - w * 0.02) : 0,
-      rare: isShopRarityUnlocked('rare', w) ? Math.min(0.34, 0.27 + w * 0.004) : 0,
-      epic: isShopRarityUnlocked('epic', w) ? Math.min(0.24, 0.1 + (w - 5) * 0.014) : 0,
-      legendary: isShopRarityUnlocked('legendary', w) ? Math.min(0.14, 0.04 + (w - 10) * 0.01) : 0,
+      common: isShopRarityUnlocked('common', w) ? Math.max(0.7, 0.92 - w * 0.025) : 0,
+      rare: isShopRarityUnlocked('rare', w) ? Math.max(0.08, 0.18 + Math.max(0, w - 5) * 0.012) : 0,
+      epic: isShopRarityUnlocked('epic', w) ? Math.max(0.02, 0.05 + Math.max(0, w - 9) * 0.01) : 0,
+      legendary: isShopRarityUnlocked('legendary', w) ? Math.max(0.01, (w - 17) * 0.006) : 0,
     };
-    const total = raw.common + raw.rare + raw.epic + raw.legendary;
-    return {
-      common: raw.common / total,
-      rare: raw.rare / total,
-      epic: raw.epic / total,
-      legendary: raw.legendary / total,
-    };
+    return normalizeRarityWeights(raw);
   }
 
   private rollShopRarity(wave: number): Rarity {
