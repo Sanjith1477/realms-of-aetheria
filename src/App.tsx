@@ -35,7 +35,6 @@ import {
   signInWithUsername,
   signUpWithUsername,
   subscribeToRuns,
-  syncProgress,
   type WorldEvent,
 } from './lib/api';
 import { PATCH_NOTES, CURRENT_VERSION, lastSeenVersion, markVersionSeen, compareVersions, type PatchNote } from './game/patchnotes';
@@ -126,11 +125,6 @@ export default function App() {
             if (progressed) {
               setActiveProfileState(progressed);
               setProfiles(loadProfiles());
-            }
-            if (isSupabaseConfigured) {
-              void syncProgress(st.classId, st.wave).then((profile) => {
-                if (profile) setActiveProfileState(profile);
-              });
             }
           }
         }
@@ -479,9 +473,6 @@ export default function App() {
           setProfiles(loadProfiles());
         }
         if (cloud) {
-          void syncProgress(live.classId, live.wave).then((profile) => {
-            if (profile) setActiveProfileState(profile);
-          });
           void recordRun({
             classId: live.classId,
             score: live.score,

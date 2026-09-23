@@ -17,14 +17,6 @@ import {
 import { CLASSES, unlockedClassIdsAtWave } from '../game/data';
 import type { HeroBest, PlayerProfile, ScoreEntry } from '../game/highscores';
 
-interface HeroRecordRow {
-  user_id: string;
-  class_id: string;
-  best_score: number;
-  best_wave: number;
-  runs: number;
-}
-
 export interface RunInput {
   classId: string;
   score: number;
@@ -147,9 +139,7 @@ async function fetchProfile(id: string) {
 
 export async function setPreferredClass(classId: string) {
   if (!isSupabaseConfigured || !supabase) return;
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) return;
-  await supabase.from('profiles').update({ preferred_class: classId, last_seen: new Date().toISOString() }).eq('id', data.session.user.id);
+  await supabase.rpc('set_preferred_class', { p_class_id: classId });
 }
 
 function unlocksForWave(wave: number) {
@@ -176,66 +166,30 @@ export function dbProfileToLocal(row: DbProfile, heroBests: Record<string, HeroB
 
 export async function markCloudDiscovery(kind: 'power' | 'shop', id: string) {
   if (!isSupabaseConfigured || !supabase) return;
-  const { data: auth } = await supabase.auth.getSession();
-  if (!auth.session) return;
-  const column = kind === 'power' ? 'discovered_powers' : 'discovered_shop_items';
-  const { data } = await supabase.from('profiles').select(column).eq('id', auth.session.user.id).single();
-  const current = ((data as Record<string, string[]> | null)?.[column] ?? []);
-  if (current.includes(id)) return;
-  await supabase.from('profiles').update({ [column]: [...current, id] }).eq('id', auth.session.user.id);
+  await supabase.rpc('record_discovery', { p_kind: kind, p_id: id });
 }
 
 export async function hydrateProfile(row: DbProfile): Promise<PlayerProfile> {
   if (!supabase) return dbProfileToLocal(row);
-  const { data } = await supabase.from('hero_records').select('*').eq('user_id', row.id);
+  const { data } = await supabase.rpc('my_hero_records');
   const heroBests: Record<string, HeroBest> = {};
-  for (const rec of (data as HeroRecordRow[] | null) ?? []) {
+  for (const rec of (data as { class_id: string; best_score: number; best_wave: number; runs: number }[] | null) ?? []) {
     heroBests[rec.class_id] = { score: rec.best_score, wave: rec.best_wave, runs: rec.runs };
   }
   return dbProfileToLocal(row, heroBests);
-}
-
-export async function syncProgress(classId: string, wave: number): Promise<PlayerProfile | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) return null;
-  const { data: row } = await supabase.from('profiles').select('best_wave, unlocked_classes').eq('id', data.session.user.id).single();
-  const current = row as { best_wave: number; unlocked_classes: string[] } | null;
-  const bestWave = Math.max(current?.best_wave ?? 0, wave);
-  const unlocked = unlocksForWave(bestWave);
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      preferred_class: classId,
-      best_wave: bestWave,
-      unlocked_classes: unlocked,
-      last_seen: new Date().toISOString(),
-    })
-    .eq('id', data.session.user.id);
-  if (error) return null;
-  const profile = await fetchProfile(data.session.user.id);
-  return profile.data ? hydrateProfile(profile.data) : null;
 }
 
 export async function fetchCloudState(): Promise<{ profiles: PlayerProfile[]; scores: ScoreEntry[]; error: string | null }> {
   if (!isSupabaseConfigured || !supabase) {
     return { profiles: [], scores: [], error: 'Supabase is not configured.' };
   }
-  const [profilesRes, heroesRes, matchesRes] = await Promise.all([
-    supabase.from('profiles').select('*'),
-    supabase.from('hero_records').select('*'),
-    supabase.from('match_results').select('*').order('score', { ascending: false }).limit(100),
+  const [profilesRes, matchesRes] = await Promise.all([
+    supabase.from('profiles').select('id,username,preferred_class,best_score,best_wave,total_kills,runs,created_at,last_seen'),
+    supabase.from('match_results').select('id,user_id,class_id,score,wave,level,duration_seconds,created_at').order('score', { ascending: false }).limit(100),
   ]);
   if (profilesRes.error) return { profiles: [], scores: [], error: profilesRes.error.message };
 
-  const heroByUser = new Map<string, Record<string, HeroBest>>();
-  for (const rec of (heroesRes.data as HeroRecordRow[] | null) ?? []) {
-    const bag = heroByUser.get(rec.user_id) ?? {};
-    bag[rec.class_id] = { score: rec.best_score, wave: rec.best_wave, runs: rec.runs };
-    heroByUser.set(rec.user_id, bag);
-  }
-
-  const profiles = ((profilesRes.data as DbProfile[]) ?? []).map((row) => dbProfileToLocal(row, heroByUser.get(row.id) ?? {}));
+  const profiles = ((profilesRes.data as DbProfile[]) ?? []).map((row) => dbProfileToLocal(row));
   const names = new Map(profiles.map((p) => [p.id, p.name]));
   const scores: ScoreEntry[] = ((matchesRes.data as DbMatchResult[]) ?? []).map((row) => ({
     name: names.get(row.user_id) ?? 'Wanderer',
@@ -293,6 +247,8 @@ const UNLOCK_WAVES: [number, string][] = [
 ];
 
 const BOSS_NAMES = ['Mizuchi', 'Khorzun', 'Isbrekk', "Balam K'in", "Zar'qun"];
+let worldFeedNames = new Map<string, string>();
+let worldFeedTopScore = 0;
 
 /** Turn one match row into 1–3 human-readable achievement lines. */
 export function eventsFromRun(
@@ -329,6 +285,8 @@ export async function fetchRecentEvents(limit = 14): Promise<WorldEvent[]> {
   ]);
   const names = new Map(((profilesRes.data as { id: string; username: string }[]) ?? []).map((p) => [p.id, p.username]));
   const top = ((topRes.data as { score: number }[]) ?? [])[0]?.score ?? 0;
+  worldFeedNames = names;
+  worldFeedTopScore = top;
   const out: WorldEvent[] = [];
   for (const row of ((runsRes.data as { id: string; user_id: string; class_id: string; score: number; wave: number; created_at: string }[]) ?? [])) {
     const cls = CLASSES.find((c) => c.id === row.class_id);
@@ -344,11 +302,9 @@ export function subscribeToRuns(onEvents: (events: WorldEvent[]) => void): () =>
     .channel('world-feed')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'match_results' }, async (payload) => {
       const row = payload.new as { id: string; user_id: string; class_id: string; score: number; wave: number; created_at: string };
-      const { data } = await supabase!.from('profiles').select('username').eq('id', row.user_id).single();
-      const { data: top } = await supabase!.from('match_results').select('score').order('score', { ascending: false }).limit(1);
-      const best = ((top as { score: number }[]) ?? [])[0]?.score ?? 0;
+      if (row.score > worldFeedTopScore) worldFeedTopScore = row.score;
       const cls = CLASSES.find((c) => c.id === row.class_id);
-      onEvents(eventsFromRun(row, (data as { username: string } | null)?.username ?? 'A wanderer', cls?.name ?? row.class_id, row.score >= best));
+      onEvents(eventsFromRun(row, worldFeedNames.get(row.user_id) ?? 'A wanderer', cls?.name ?? row.class_id, row.score >= worldFeedTopScore));
     })
     .subscribe();
   return () => {
