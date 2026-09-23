@@ -3551,13 +3551,13 @@ export class Game {
     ];
     const kinds = zones[zoneIndex];
     const out: SceneryProp[] = [];
-    for (let i = 0; i < 34; i++) {
+    for (let i = 0; i < 42; i++) {
       let x = 0;
       let y = 0;
       do {
         x = rand(65, ARENA_W - 65);
         y = rand(65, ARENA_H - 65);
-      } while (Math.hypot(x - ARENA_W / 2, y - ARENA_H / 2) < 270);
+      } while (Math.hypot(x - ARENA_W / 2, y - ARENA_H / 2) < 390);
       out.push({
         x,
         y,

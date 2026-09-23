@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { PatchNote } from '../game/patchnotes';
 
 interface Props {
@@ -15,6 +16,17 @@ const KIND: Record<PatchNote['changes'][number]['kind'], { label: string; color:
 };
 
 export function PatchNotesOverlay({ notes, currentVersion, lastSeen, onClose }: Props) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [onClose]);
+
   return (
     <div className="absolute inset-0 z-[55] flex items-center justify-center bg-abyss/88 p-3 sm:p-6 overflow-y-auto">
       <div className="w-full max-w-3xl my-auto anim-fade-up">
@@ -32,8 +44,8 @@ export function PatchNotesOverlay({ notes, currentVersion, lastSeen, onClose }: 
               )}
             </div>
           </div>
-          <button onClick={onClose} className="btn-dark clip-notch-sm px-3 py-2 text-xs font-bold shrink-0">
-            ✕ CLOSE
+          <button onClick={onClose} aria-label="Back" className="btn-dark clip-notch-sm px-3 py-2 text-xs font-bold shrink-0">
+            ← BACK
           </button>
         </div>
 
