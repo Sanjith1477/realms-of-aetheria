@@ -127,7 +127,11 @@ export default function App() {
               setActiveProfileState(progressed);
               setProfiles(loadProfiles());
             }
-            if (isSupabaseConfigured) void syncProgress(st.classId, st.wave);
+            if (isSupabaseConfigured) {
+              void syncProgress(st.classId, st.wave).then((profile) => {
+                if (profile) setActiveProfileState(profile);
+              });
+            }
           }
         }
         if (!isSupabaseConfigured && (s === 'menu' || s === 'over')) setScores(loadScores());
@@ -475,7 +479,9 @@ export default function App() {
           setProfiles(loadProfiles());
         }
         if (cloud) {
-          void syncProgress(live.classId, live.wave);
+          void syncProgress(live.classId, live.wave).then((profile) => {
+            if (profile) setActiveProfileState(profile);
+          });
           void recordRun({
             classId: live.classId,
             score: live.score,

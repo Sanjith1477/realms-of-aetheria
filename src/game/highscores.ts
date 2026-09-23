@@ -1,4 +1,4 @@
-import { CLASSES } from './data';
+import { unlockedClassIdsAtWave } from './data';
 
 export interface ScoreEntry {
   name: string;
@@ -69,10 +69,6 @@ async function hashPassword(password: string): Promise<string> {
   let hash = 2166136261;
   for (let i = 0; i < password.length; i++) hash = Math.imul(hash ^ password.charCodeAt(i), 16777619);
   return `fallback-${(hash >>> 0).toString(16)}`;
-}
-
-function unlockedAtWave(wave: number) {
-  return CLASSES.filter((entry) => entry.unlockWave <= wave).map((entry) => entry.id);
 }
 
 export interface AuthResult {
@@ -155,7 +151,7 @@ export function loadProfiles(): PlayerProfile[] {
     .filter((profile) => profile && typeof profile.id === 'string' && typeof profile.name === 'string')
     .map((profile) => ({
       ...profile,
-      unlockedClasses: unlockedAtWave(profile.bestWave),
+      unlockedClasses: unlockedClassIdsAtWave(profile.bestWave),
       heroBests: profile.heroBests ?? {},
       discoveredPowers: profile.discoveredPowers ?? [],
       discoveredShopItems: profile.discoveredShopItems ?? [],
@@ -287,7 +283,7 @@ export function updateProfileProgress(id: string, wave: number, preferredClass: 
       preferredClass,
       bestWave,
       lastSeen: Date.now(),
-      unlockedClasses: unlockedAtWave(bestWave),
+      unlockedClasses: unlockedClassIdsAtWave(bestWave),
     };
   });
   const updated = next.find((profile) => profile.id === id) ?? null;
@@ -328,7 +324,7 @@ export function recordProfileRun(
       totalKills: item.totalKills + entry.kills,
       runs: item.runs + 1,
       heroBests,
-      unlockedClasses: unlockedAtWave(Math.max(item.bestWave, entry.wave)),
+      unlockedClasses: unlockedClassIdsAtWave(Math.max(item.bestWave, entry.wave)),
     };
   });
   write(PROFILES_KEY, nextProfiles);

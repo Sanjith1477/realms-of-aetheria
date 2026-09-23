@@ -200,6 +200,10 @@ export const CLASSES: ClassDef[] = [
   },
 ];
 
+export function unlockedClassIdsAtWave(wave: number): string[] {
+  return CLASSES.filter((entry) => entry.unlockWave <= wave).map((entry) => entry.id);
+}
+
 export interface ZoneDef {
   name: string;
   culture: string;

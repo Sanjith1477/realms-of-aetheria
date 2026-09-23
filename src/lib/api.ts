@@ -14,7 +14,7 @@ import {
   type OverallRow,
   type HeroRow,
 } from './supabase';
-import { CLASSES } from '../game/data';
+import { CLASSES, unlockedClassIdsAtWave } from '../game/data';
 import type { HeroBest, PlayerProfile, ScoreEntry } from '../game/highscores';
 
 interface HeroRecordRow {
@@ -153,7 +153,7 @@ export async function setPreferredClass(classId: string) {
 }
 
 function unlocksForWave(wave: number) {
-  return CLASSES.filter((entry) => entry.unlockWave <= wave).map((entry) => entry.id);
+  return unlockedClassIdsAtWave(wave);
 }
 
 export function dbProfileToLocal(row: DbProfile, heroBests: Record<string, HeroBest> = {}): PlayerProfile {
@@ -195,15 +195,15 @@ export async function hydrateProfile(row: DbProfile): Promise<PlayerProfile> {
   return dbProfileToLocal(row, heroBests);
 }
 
-export async function syncProgress(classId: string, wave: number) {
-  if (!isSupabaseConfigured || !supabase) return;
+export async function syncProgress(classId: string, wave: number): Promise<PlayerProfile | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
   const { data } = await supabase.auth.getSession();
-  if (!data.session) return;
+  if (!data.session) return null;
   const { data: row } = await supabase.from('profiles').select('best_wave, unlocked_classes').eq('id', data.session.user.id).single();
   const current = row as { best_wave: number; unlocked_classes: string[] } | null;
   const bestWave = Math.max(current?.best_wave ?? 0, wave);
   const unlocked = unlocksForWave(bestWave);
-  await supabase
+  const { error } = await supabase
     .from('profiles')
     .update({
       preferred_class: classId,
@@ -212,6 +212,9 @@ export async function syncProgress(classId: string, wave: number) {
       last_seen: new Date().toISOString(),
     })
     .eq('id', data.session.user.id);
+  if (error) return null;
+  const profile = await fetchProfile(data.session.user.id);
+  return profile.data ? hydrateProfile(profile.data) : null;
 }
 
 export async function fetchCloudState(): Promise<{ profiles: PlayerProfile[]; scores: ScoreEntry[]; error: string | null }> {
