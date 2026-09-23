@@ -1,14 +1,9 @@
-import { useState } from 'react';
-import type { ScoreEntry } from '../game/highscores';
 import type { ActiveSkillSummary, MarketplacePowerupSummary } from '../game/engine';
-import { Leaderboard } from './Leaderboard';
 import { useViewport } from '../hooks/useViewport';
 
 interface Props {
   wave: number;
   score: number;
-  scores: ScoreEntry[];
-  activeProfileId?: string;
   skills: ActiveSkillSummary[];
   totalStats: { label: string; value: string }[];
   marketplacePowerups: MarketplacePowerupSummary[];
@@ -18,18 +13,9 @@ interface Props {
   onMenu: () => void;
 }
 
-function formatRemainingTime(seconds: number | null): string {
-  if (seconds === null || seconds <= 0) return '0s';
-  const total = Math.max(0, Math.ceil(seconds));
-  const mins = Math.floor(total / 60);
-  const secs = total % 60;
-  if (mins > 0) return `${mins}m ${secs}s`;
-  return `${secs}s`;
-}
-
-export function PauseOverlay({ wave, score, scores, activeProfileId, skills, totalStats, marketplacePowerups, onOpenSettings, onResume, onRestart, onMenu }: Props) {
+export function PauseOverlay({ wave, score, skills, totalStats, marketplacePowerups, onOpenSettings, onResume, onRestart, onMenu }: Props) {
   const vp = useViewport();
-  const [buildTab, setBuildTab] = useState<'skills' | 'marketplace'>('skills');
+
 
   return (
     <div className="absolute inset-0 z-40 bg-abyss/75 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -134,72 +120,6 @@ export function PauseOverlay({ wave, score, scores, activeProfileId, skills, tot
           )}
         </div>
 
-        <div className="mt-5 border-t border-iron pt-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <h3 className="font-display text-[11px] tracking-[0.3em] text-gold">CURRENT BUILD</h3>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setBuildTab('skills')}
-                className={`px-2.5 py-1 text-[10px] font-display tracking-[0.2em] clip-notch-sm border ${buildTab === 'skills' ? 'bg-gold/15 text-goldbright border-gold/60' : 'bg-abyss/30 text-faint border-iron'}`}
-              >
-                SKILLS
-              </button>
-              <button
-                type="button"
-                onClick={() => setBuildTab('marketplace')}
-                className={`px-2.5 py-1 text-[10px] font-display tracking-[0.2em] clip-notch-sm border ${buildTab === 'marketplace' ? 'bg-gold/15 text-goldbright border-gold/60' : 'bg-abyss/30 text-faint border-iron'}`}
-              >
-                MARKETPLACE
-              </button>
-            </div>
-          </div>
-
-          <div className="max-h-[28rem] overflow-y-auto pr-1">
-            {buildTab === 'skills' ? (
-              <div className="space-y-2.5 text-[11px] text-parch/80">
-                {skills.length === 0 ? <div className="panel bg-abyss/50 border border-iron/80 p-3 text-faint">No skills acquired</div> : skills.map((skill) => (
-                  <div key={skill.id} className="panel bg-abyss/50 border border-iron/80 p-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="font-bold text-parch text-sm leading-tight">{skill.name}</div>
-                        <div className="mt-1 text-[9px] uppercase tracking-[0.2em] text-faint">{skill.rarity}</div>
-                      </div>
-                      {skill.maxStacks ? (
-                        <div className="text-[10px] text-goldbright font-bold whitespace-nowrap">Stacks: {skill.count}/{skill.maxStacks}</div>
-                      ) : null}
-                    </div>
-                    <div className="mt-2 text-parch/90 leading-relaxed">{skill.valueText}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2.5 text-[11px] text-parch/80">
-                {marketplacePowerups.length === 0 ? <div className="panel bg-abyss/50 border border-iron/80 p-3 text-faint">No active marketplace effects</div> : marketplacePowerups.map((entry, i) => (
-                  <div key={`${entry.name}-${i}`} className="panel bg-abyss/50 border border-iron/80 p-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="font-bold text-parch text-sm leading-tight">{entry.name}</div>
-                        {entry.count > 1 ? <div className="mt-1 text-[9px] uppercase tracking-[0.2em] text-faint">x{entry.count}</div> : null}
-                      </div>
-                      {entry.remainingSeconds !== null ? (
-                        <div className="text-[10px] text-goldbright font-bold whitespace-nowrap">ACTIVE • {formatRemainingTime(entry.remainingSeconds)} remaining</div>
-                      ) : (
-                        <div className="text-[10px] text-verdant font-bold whitespace-nowrap">PERMANENT</div>
-                      )}
-                    </div>
-                    <div className="mt-2 text-parch/90 leading-relaxed">{entry.effect}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <h3 className="font-display text-[11px] tracking-[0.3em] text-gold mb-1.5">HALL OF LEGENDS</h3>
-          <Leaderboard scores={scores} activeProfileId={activeProfileId} compact />
-        </div>
       </div>
     </div>
   );

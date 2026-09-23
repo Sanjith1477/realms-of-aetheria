@@ -205,7 +205,9 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
           className="panel-gold clip-notch shrink-0 z-10"
           style={{
             width: compact ? (tiny ? 116 : 140) : 228,
-            padding: compact ? '4px 5px' : '8px 10px',
+            padding: compact ? '5px 6px' : '9px 11px',
+            background: 'linear-gradient(135deg, rgba(7,16,28,0.96), rgba(11,25,38,0.94))',
+            boxShadow: '0 5px 18px rgba(0,0,0,0.28), 0 0 16px rgba(70,200,220,0.08)',
           }}
         >
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -229,21 +231,21 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
               <div className="flex items-baseline gap-1.5">
                 <span
                   ref={nameRef}
-                  className="font-display font-bold text-parch truncate leading-none"
+                  className="font-display font-black text-white truncate leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
                   style={{ fontSize: compact ? 11 : 13 }}
                 />
-                {!compact && <span ref={classRef} className="text-[9px] text-faint font-bold tracking-wider truncate" />}
+                {!compact && <span ref={classRef} className="text-[9px] text-cyan-200/90 font-bold tracking-wide truncate" />}
               </div>
               <div className="bar-shell clip-notch-sm relative mt-1" style={{ height: compact ? 11 : 13 }}>
-                <div ref={hpFill} className="bar-fill" style={{ width: '100%', background: 'linear-gradient(180deg,#ff8a8a,#c93c3c)' }} />
+                <div ref={hpFill} className="bar-fill" style={{ width: '100%', background: 'linear-gradient(180deg,#ff8f96,#e54855)' }} />
                 <span
                   ref={hpText}
                   className="absolute inset-0 flex items-center justify-center font-bold text-white"
                   style={{ fontSize: compact ? 8 : 9, textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}
                 />
               </div>
-              <div className="bar-shell clip-notch-sm mt-1" style={{ height: compact ? 5 : 6 }}>
-                <div ref={xpFill} className="bar-fill" style={{ width: '0%', background: 'linear-gradient(180deg,#7fe8cf,#2fae8f)' }} />
+              <div className="bar-shell clip-notch-sm mt-1 bg-black/70 border border-cyan-300/25" style={{ height: compact ? 5 : 6 }}>
+                <div ref={xpFill} className="bar-fill" style={{ width: '0%', background: 'linear-gradient(90deg,#63e6d1,#16bfc4)' }} />
               </div>
             </div>
             <span
@@ -262,8 +264,8 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
         {/* zone / wave / announce / boss */}
         <div className="flex-1 flex flex-col items-center min-w-0 px-1">
           <div
-            className="panel clip-notch flex items-center justify-center gap-1 sm:gap-2 font-bold tracking-wider flex-wrap"
-            style={{ padding: compact ? '2px 5px' : '4px 12px', fontSize: compact ? 8.5 : 11 }}
+            className="panel-gold clip-notch flex items-center justify-center gap-1 sm:gap-2 font-bold tracking-wider flex-wrap"
+            style={{ padding: compact ? '3px 6px' : '5px 13px', fontSize: compact ? 8.5 : 11, background: 'rgba(5,14,24,0.92)', boxShadow: '0 4px 16px rgba(0,0,0,0.24)' }}
           >
             <span ref={zoneName} className="truncate" style={{ maxWidth: compact ? '22vw' : '38vw' }} />
             <span className="w-[1px] h-2.5 bg-iron" />
@@ -414,10 +416,12 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
       >
         {/* event feed — shrinks out of the way of touch controls */}
         <div
-          className="flex flex-col gap-[3px] min-w-0"
+            className="flex flex-col gap-[4px] min-w-0 panel clip-notch px-2.5 py-2"
           style={{
             width: isTouch ? (compact ? '46vw' : '38vw') : 'min(400px, 46vw)',
             marginBottom: isTouch ? (compact ? 96 : 116) : 0,
+              background: 'rgba(4,10,18,0.82)',
+              borderColor: 'rgba(82,164,190,0.22)',
           }}
         >
           {[0, 1, 2, 3, 4].map((i) => (
@@ -426,8 +430,8 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
               ref={(el) => {
                 feedRows.current[i] = el;
               }}
-              className="font-bold truncate"
-              style={{ display: 'none', fontSize: compact ? 10 : 11, textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}
+              className="font-bold truncate text-parch"
+              style={{ display: 'none', fontSize: compact ? 10 : 11, lineHeight: 1.35, textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}
             />
           ))}
         </div>
