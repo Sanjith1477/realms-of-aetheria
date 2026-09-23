@@ -42,10 +42,13 @@ export class SFX {
   private master: GainNode | null = null;
   private noiseBuf: AudioBuffer | null = null;
   muted = false;
+  private pageHidden = false;
+  private resumeOnVisible = false;
   /** user volume 0..1 */
   private volume = 0.7;
 
   ensure() {
+    if (this.pageHidden) return;
     if (this.ctx) {
       if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
       return;
@@ -76,6 +79,18 @@ export class SFX {
   }
   getVolume() {
     return this.volume;
+  }
+
+  setPageVisible(visible: boolean) {
+    if (!visible) {
+      this.pageHidden = true;
+      this.resumeOnVisible = this.ctx?.state === 'running';
+      if (this.resumeOnVisible) this.ctx?.suspend().catch(() => {});
+      return;
+    }
+    this.pageHidden = false;
+    if (this.resumeOnVisible && this.ctx?.state === 'suspended') this.ctx.resume().catch(() => {});
+    this.resumeOnVisible = false;
   }
 
   private apply() {

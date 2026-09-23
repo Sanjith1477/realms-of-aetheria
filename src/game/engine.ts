@@ -535,6 +535,10 @@ export class Game {
     this.music.ensure();
     this.music.setEnabled(v);
   }
+  setAudioPageVisible(visible: boolean) {
+    this.sfx.setPageVisible(visible);
+    this.music.setPageVisible(visible);
+  }
   isMusicEnabled() {
     return this.music.isEnabled();
   }

@@ -191,6 +191,12 @@ export default function App() {
 
   // Browsers block audio until the first gesture — unlock on any interaction.
   useEffect(() => {
+    const onVisibilityChange = () => gameRef.current?.setAudioPageVisible(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
+
+  useEffect(() => {
     const unlock = () => {
       const g = gameRef.current;
       if (!g) return;
@@ -825,6 +831,8 @@ export default function App() {
         <PauseOverlay
           wave={pauseStats.wave}
           score={pauseStats.score}
+          scores={scores}
+          activeProfileId={activeProfile?.id}
           skills={pauseData.activeSkills}
           totalStats={pauseData.totalBuildStats}
           marketplacePowerups={pauseData.marketplacePowerups}

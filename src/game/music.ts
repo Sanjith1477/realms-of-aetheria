@@ -149,8 +149,11 @@ export class Music {
   private enabled = true;
   private ducked = false;
   private started = false;
+  private pageHidden = false;
+  private resumeOnVisible = false;
 
   ensure() {
+    if (this.pageHidden) return;
     if (this.ctx) {
       if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
       if (!this.started) this.startLoop();
@@ -189,6 +192,21 @@ export class Music {
   }
   getVolume() {
     return this.volume;
+  }
+
+  setPageVisible(visible: boolean) {
+    if (!visible) {
+      this.pageHidden = true;
+      this.resumeOnVisible = this.ctx?.state === 'running';
+      if (this.resumeOnVisible) this.ctx?.suspend().catch(() => {});
+      return;
+    }
+    this.pageHidden = false;
+    if (this.resumeOnVisible && this.ctx?.state === 'suspended') {
+      this.nextTime = this.ctx.currentTime + 0.1;
+      this.ctx.resume().catch(() => {});
+    }
+    this.resumeOnVisible = false;
   }
 
   /** Lower volume while paused / overlays are open. */
