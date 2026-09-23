@@ -197,17 +197,18 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
 
       {/* top row */}
       <div
-        className="absolute top-0 left-0 right-0 flex items-start justify-between gap-1 sm:gap-2 px-1 sm:px-3"
+        className={`absolute top-0 left-0 right-0 flex items-start justify-between gap-1 sm:gap-2 px-1 sm:px-3 ${isTouch ? 'h-[116px]' : ''}`}
         style={{ paddingTop: 'calc(4px + env(safe-area-inset-top))' }}
       >
         {/* player frame */}
         <div
           className="panel-gold clip-notch shrink-0 z-10"
           style={{
-            width: compact ? (tiny ? 116 : 140) : 228,
-            padding: compact ? '5px 6px' : '9px 11px',
+            width: isTouch ? 'calc(100% - 8px)' : compact ? (tiny ? 116 : 140) : 228,
+            padding: isTouch ? '7px 9px' : compact ? '5px 6px' : '9px 11px',
             background: 'linear-gradient(135deg, rgba(7,16,28,0.96), rgba(11,25,38,0.94))',
             boxShadow: '0 5px 18px rgba(0,0,0,0.28), 0 0 16px rgba(70,200,220,0.08)',
+            ...(isTouch ? { position: 'absolute', left: 4, top: 53 } : {}),
           }}
         >
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -232,9 +233,9 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
                 <span
                   ref={nameRef}
                   className="font-display font-black text-white truncate leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
-                  style={{ fontSize: compact ? 11 : 13 }}
+                  style={{ fontSize: isTouch ? 13 : compact ? 11 : 13 }}
                 />
-                {!compact && <span ref={classRef} className="text-[9px] text-cyan-200/90 font-bold tracking-wide truncate" />}
+                {(isTouch || !compact) && <span ref={classRef} className="text-[10px] text-cyan-200/90 font-bold tracking-wide truncate" />}
               </div>
               <div className="bar-shell clip-notch-sm relative mt-1" style={{ height: compact ? 11 : 13 }}>
                 <div ref={hpFill} className="bar-fill" style={{ width: '100%', background: 'linear-gradient(180deg,#ff8f96,#e54855)' }} />
@@ -251,7 +252,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
             <span
               ref={lvRef}
               className="font-display font-black text-goldbright text-emboss shrink-0 text-right"
-              style={{ fontSize: compact ? 11 : 14, width: compact ? 30 : 44 }}
+              style={{ fontSize: isTouch ? 15 : compact ? 11 : 14, width: isTouch ? 42 : compact ? 30 : 44 }}
             />
           </div>
           <div
@@ -265,9 +266,15 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
         <div className="flex-1 flex flex-col items-center min-w-0 px-1">
           <div
             className="panel-gold clip-notch flex items-center justify-center gap-1 sm:gap-2 font-bold tracking-wider flex-wrap"
-            style={{ padding: compact ? '3px 6px' : '5px 13px', fontSize: compact ? 8.5 : 11, background: 'rgba(5,14,24,0.92)', boxShadow: '0 4px 16px rgba(0,0,0,0.24)' }}
+            style={{
+              padding: compact ? '3px 6px' : '5px 13px',
+              fontSize: compact ? 8.5 : 11,
+              background: 'rgba(5,14,24,0.92)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.24)',
+              ...(isTouch ? { position: 'absolute', left: 4, right: 154, top: 4, minHeight: 40 } : {}),
+            }}
           >
-            <span ref={zoneName} className="truncate" style={{ maxWidth: compact ? '22vw' : '38vw' }} />
+            <span ref={zoneName} className="truncate" style={{ maxWidth: isTouch ? '34vw' : compact ? '22vw' : '38vw' }} />
             <span className="w-[1px] h-2.5 bg-iron" />
             <span ref={waveText} className="text-goldbright font-display whitespace-nowrap" />
             <span
@@ -301,7 +308,12 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
         <div className="flex items-start gap-1 shrink-0 z-10">
           <div
             className="panel-gold clip-notch text-right"
-            style={{ width: compact ? (tiny ? 92 : 110) : 176, padding: compact ? '5px 6px' : '9px 12px', background: 'linear-gradient(135deg, rgba(7,16,28,0.96), rgba(11,25,38,0.94))' }}
+            style={{
+              width: compact ? (tiny ? 92 : 110) : 176,
+              padding: compact ? '5px 6px' : '9px 12px',
+              background: 'linear-gradient(135deg, rgba(7,16,28,0.96), rgba(11,25,38,0.94))',
+              ...(isTouch ? { position: 'absolute', right: 50, top: 4 } : {}),
+            }}
           >
             <div className="font-display font-bold tracking-[0.3em] text-cyan-100/85" style={{ fontSize: compact ? 8 : 9 }}>
               SCORE
@@ -375,7 +387,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
           </div>
 
           {/* dedicated system cluster: PAUSE is always visible and thumb-sized */}
-          <div className="flex flex-col items-center gap-1 pointer-events-auto">
+          <div className="flex flex-col items-center gap-1 pointer-events-auto" style={isTouch ? { position: 'absolute', right: 4, top: 4 } : undefined}>
             <button
               onClick={onPause}
               aria-label="Pause game"
@@ -418,8 +430,8 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
         <div
           className="flex flex-col gap-[5px] min-w-0 panel-gold clip-notch px-2.5 py-2.5"
           style={{
-            width: isTouch ? (compact ? '46vw' : '38vw') : 'min(400px, 46vw)',
-            marginBottom: isTouch ? (compact ? 96 : 116) : 0,
+            width: isTouch ? 'min(64vw, 340px)' : 'min(400px, 46vw)',
+            marginBottom: isTouch ? 'calc(16px + env(safe-area-inset-bottom))' : 0,
             background: 'rgba(4,10,18,0.9)',
             borderColor: 'rgba(82,164,190,0.38)',
           }}
