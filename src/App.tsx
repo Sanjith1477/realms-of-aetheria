@@ -831,8 +831,6 @@ export default function App() {
         <PauseOverlay
           wave={pauseStats.wave}
           score={pauseStats.score}
-          scores={scores}
-          activeProfileId={activeProfile?.id}
           skills={pauseData.activeSkills}
           totalStats={pauseData.totalBuildStats}
           marketplacePowerups={pauseData.marketplacePowerups}

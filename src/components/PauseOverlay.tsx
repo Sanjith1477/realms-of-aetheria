@@ -1,4 +1,3 @@
-import type { ScoreEntry } from '../game/highscores';
 import type { ActiveSkillSummary, MarketplacePowerupSummary } from '../game/engine';
 import { ZONES } from '../game/data';
 import { useViewport } from '../hooks/useViewport';
@@ -6,8 +5,6 @@ import { useViewport } from '../hooks/useViewport';
 interface Props {
   wave: number;
   score: number;
-  scores: ScoreEntry[];
-  activeProfileId?: string;
   skills: ActiveSkillSummary[];
   totalStats: { label: string; value: string }[];
   marketplacePowerups: MarketplacePowerupSummary[];

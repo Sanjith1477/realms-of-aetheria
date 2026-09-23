@@ -204,8 +204,8 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
         <div
           className="panel-gold clip-notch shrink-0 z-10"
           style={{
-            width: isTouch ? 'calc(100% - 8px)' : compact ? (tiny ? 116 : 140) : 228,
-            padding: isTouch ? '7px 9px' : compact ? '5px 6px' : '9px 11px',
+            width: isTouch ? 'calc(100% - 8px)' : compact ? (tiny ? 116 : 140) : 240,
+            padding: isTouch ? '7px 9px' : compact ? '5px 6px' : '10px 12px',
             background: 'linear-gradient(135deg, rgba(7,16,28,0.96), rgba(11,25,38,0.94))',
             boxShadow: '0 5px 18px rgba(0,0,0,0.28), 0 0 16px rgba(70,200,220,0.08)',
             ...(isTouch ? { position: 'absolute', left: 4, top: 77 } : {}),
@@ -233,16 +233,16 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
                 <span
                   ref={nameRef}
                   className="font-display font-black text-white truncate leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
-                  style={{ fontSize: isTouch ? 13 : compact ? 11 : 13 }}
+                  style={{ fontSize: isTouch ? 13 : compact ? 11 : 14 }}
                 />
                 {(isTouch || !compact) && <span ref={classRef} className="text-[10px] text-cyan-200/90 font-bold tracking-wide truncate" />}
               </div>
-              <div className="bar-shell clip-notch-sm relative mt-1" style={{ height: compact ? 11 : 13 }}>
+              <div className="bar-shell clip-notch-sm relative mt-1" style={{ height: compact ? 11 : 14 }}>
                 <div ref={hpFill} className="bar-fill" style={{ width: '100%', background: 'linear-gradient(180deg,#ff8f96,#e54855)' }} />
                 <span
                   ref={hpText}
                   className="absolute inset-0 flex items-center justify-center font-bold text-white"
-                  style={{ fontSize: compact ? 8 : 9, textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}
+                  style={{ fontSize: compact ? 8 : 10, textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}
                 />
               </div>
               <div className="bar-shell clip-notch-sm mt-1 bg-black/70 border border-cyan-300/25" style={{ height: compact ? 5 : 6 }}>
@@ -252,7 +252,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
             <span
               ref={lvRef}
               className="font-display font-black text-goldbright text-emboss shrink-0 text-right"
-              style={{ fontSize: isTouch ? 15 : compact ? 11 : 14, width: isTouch ? 42 : compact ? 30 : 44 }}
+              style={{ fontSize: isTouch ? 15 : compact ? 11 : 15, width: isTouch ? 42 : compact ? 30 : 48 }}
             />
           </div>
           <div
@@ -267,8 +267,8 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
           <div
             className="panel-gold clip-notch flex items-center justify-center gap-1 sm:gap-2 font-bold tracking-wider flex-wrap"
             style={{
-              padding: compact ? '3px 6px' : '5px 13px',
-              fontSize: compact ? 8.5 : 11,
+              padding: compact ? '3px 6px' : '6px 15px',
+              fontSize: compact ? 8.5 : 11.5,
               background: 'rgba(5,14,24,0.92)',
               boxShadow: '0 4px 16px rgba(0,0,0,0.24)',
               ...(isTouch ? { position: 'absolute', left: 4, right: 154, top: 4, minHeight: 40 } : {}),
@@ -310,7 +310,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
             className="panel-gold clip-notch text-right"
             style={{
               width: compact ? (tiny ? 92 : 110) : 176,
-              padding: compact ? '5px 6px' : '9px 12px',
+              padding: compact ? '5px 6px' : '10px 13px',
               background: 'linear-gradient(135deg, rgba(7,16,28,0.96), rgba(11,25,38,0.94))',
               ...(isTouch ? { position: 'absolute', right: 50, top: 4 } : {}),
             }}
@@ -433,7 +433,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
             width: isTouch ? 'min(64vw, 340px)' : 'min(400px, 46vw)',
             marginBottom: isTouch ? 'calc(16px + env(safe-area-inset-bottom))' : 0,
             background: 'rgba(4,10,18,0.9)',
-            borderColor: 'rgba(82,164,190,0.38)',
+            borderColor: isTouch ? 'rgba(82,164,190,0.38)' : 'rgba(226,180,92,0.38)',
           }}
         >
           {[0, 1, 2, 3, 4].map((i) => (
@@ -443,7 +443,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
                 feedRows.current[i] = el;
               }}
               className="font-bold truncate text-parch"
-              style={{ display: 'none', fontSize: compact ? 10 : 11, lineHeight: 1.45, textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}
+              style={{ display: 'none', fontSize: compact ? 10 : 12, lineHeight: 1.45, textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}
             />
           ))}
         </div>
@@ -452,7 +452,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
         {!isTouch && (
           <div className="flex flex-col items-end gap-1.5 shrink-0">
             <div ref={legActive} className="font-display text-[10px] tracking-[0.2em] text-goldbright text-emboss px-2 py-1 panel-gold clip-notch-sm" style={{ display: 'none' }} />
-            <div className="flex items-end gap-3 panel-gold clip-notch px-3 py-3 bg-[rgba(5,14,24,0.94)]">
+            <div className="flex items-end gap-3 panel-gold clip-notch px-3.5 py-3 bg-[rgba(5,14,24,0.94)]">
               <div className="flex flex-col items-center gap-1">
                 <div className="relative panel-gold clip-notch-sm flex items-center justify-center overflow-hidden" style={{ width: 66, height: 66, boxShadow: '0 0 14px rgba(215,173,255,0.25)' }}>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d7adff" strokeWidth="2" strokeLinejoin="round">
