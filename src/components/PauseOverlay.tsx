@@ -9,12 +9,13 @@ interface Props {
   totalStats: { label: string; value: string }[];
   marketplacePowerups: MarketplacePowerupSummary[];
   onOpenSettings: () => void;
+  onOpenTutorial?: () => void;
   onResume: () => void;
   onRestart: () => void;
   onMenu: () => void;
 }
 
-function ReferenceDesktopPauseLayout({ wave, score, skills, totalStats, marketplacePowerups, onOpenSettings, onResume, onRestart, onMenu }: Props) {
+function ReferenceDesktopPauseLayout({ wave, score, skills, totalStats, marketplacePowerups, onOpenSettings, onOpenTutorial, onResume, onRestart, onMenu }: Props) {
 
   return (
     <div className="absolute inset-0 z-40 bg-abyss/75 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -32,7 +33,7 @@ function ReferenceDesktopPauseLayout({ wave, score, skills, totalStats, marketpl
             <div className="reference-pause-nav-item flex items-center gap-3 px-3 py-3 text-[11px] font-bold text-parch"><span className="text-xl text-cyan-100">♟</span> POWER-UPS</div>
             <button onClick={onRestart} className="reference-pause-nav-item btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl text-goldbright">↻</span> RESTART</button>
             <button onClick={onOpenSettings} className="reference-pause-nav-item btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl text-goldbright">⚙</span> SETTINGS</button>
-            <div className="reference-pause-nav-item flex items-center gap-3 px-3 py-3 text-[11px] font-bold text-parch"><span className="text-xl text-cyan-100">▣</span> HOW TO PLAY</div>
+            <button onClick={onOpenTutorial} className="reference-pause-nav-item btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl text-cyan-100">▣</span> TUTORIAL</button>
             <button onClick={onMenu} className="reference-pause-nav-item reference-pause-abandon btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl">↪</span> ABANDON RUN</button>
           </nav>
 

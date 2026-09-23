@@ -736,10 +736,10 @@ export default function App() {
           events={events}
           onOpenProfile={() => setProfileOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
+          onOpenTutorial={() => setTutorialOpen(true)}
           onOpenCodex={(id) => setCodexClass(id)}
           onOpenIndex={() => setIndexTab('powers')}
           onOpenPatchNotes={openPatchNotes}
-          onOpenTutorial={() => setTutorialOpen(true)}
           isTouch={isTouch}
           onClassChange={rememberClass}
           onStart={startGame}
@@ -810,7 +810,7 @@ export default function App() {
         <PatchNotesOverlay notes={notes} currentVersion={currentVersion} lastSeen={seenVersion} onClose={closePatchNotes} />
       )}
 
-      {tutorialOpen && screen === 'menu' && activeProfile && !accountPanelOpen && (
+      {tutorialOpen && (screen === 'menu' || (screen === 'paused' && !isTouch)) && activeProfile && !accountPanelOpen && (
         <TutorialOverlay isTouch={isTouch} onClose={closeTutorial} />
       )}
 
@@ -835,6 +835,7 @@ export default function App() {
           totalStats={pauseData.totalBuildStats}
           marketplacePowerups={pauseData.marketplacePowerups}
           onOpenSettings={() => setSettingsOpen(true)}
+          onOpenTutorial={() => setTutorialOpen(true)}
           onResume={() => gameRef.current?.setPaused(false)}
           onRestart={restart}
           onMenu={toMenu}
