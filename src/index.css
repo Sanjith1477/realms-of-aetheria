@@ -168,6 +168,31 @@ canvas {
     border-color: #ff7777;
     color: #ff8d8d;
   }
+  .reference-pause-nav {
+    background: rgba(5, 14, 24, 0.9);
+    border-color: rgba(82, 164, 190, 0.35);
+  }
+  .reference-pause-nav-item {
+    min-height: 48px;
+    border: 1px solid transparent;
+    color: var(--color-parch);
+  }
+  .reference-pause-nav-item:hover {
+    border-color: rgba(226, 180, 92, 0.55);
+    color: var(--color-goldbright);
+  }
+  .reference-pause-resume {
+    color: #241a05;
+  }
+  .reference-pause-abandon {
+    margin-top: auto;
+    color: #ff7777;
+    border-color: rgba(224, 82, 82, 0.45);
+  }
+  .reference-pause-abandon:hover {
+    color: #ff9a9a;
+    border-color: #ff7777;
+  }
   @media (max-width: 639px) {
     .pause-action {
       min-height: 92px;

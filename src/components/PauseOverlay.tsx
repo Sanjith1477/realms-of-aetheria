@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import type { ScoreEntry } from '../game/highscores';
 import type { ActiveSkillSummary, MarketplacePowerupSummary } from '../game/engine';
 import { ZONES } from '../game/data';
-import { Leaderboard } from './Leaderboard';
 import { useViewport } from '../hooks/useViewport';
 
 interface Props {
@@ -19,89 +17,70 @@ interface Props {
   onMenu: () => void;
 }
 
-function formatRemainingTime(seconds: number | null): string {
-  if (seconds === null || seconds <= 0) return '0s';
-  const total = Math.max(0, Math.ceil(seconds));
-  const mins = Math.floor(total / 60);
-  const secs = total % 60;
-  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-}
-
-function DesktopPauseLayout({ wave, score, scores, activeProfileId, skills, totalStats, marketplacePowerups, onOpenSettings, onResume, onRestart, onMenu }: Props) {
-  const [buildTab, setBuildTab] = useState<'skills' | 'marketplace'>('skills');
+function ReferenceDesktopPauseLayout({ wave, score, skills, totalStats, marketplacePowerups, onOpenSettings, onResume, onRestart, onMenu }: Props) {
 
   return (
     <div className="absolute inset-0 z-40 bg-abyss/75 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="panel-gold clip-notch w-full max-w-2xl p-4 sm:p-6 anim-fade-up my-auto">
-        <div className="text-center">
+      <div className="reference-pause panel-gold clip-notch w-full max-w-5xl p-4 sm:p-5 anim-fade-up my-auto">
+        <div className="text-center mb-4">
           <div className="font-display text-[10px] tracking-[0.5em] text-faint">THE REALMS WAIT</div>
-          <h2 className="font-display font-black text-3xl text-goldbright text-emboss mt-1">PAUSED</h2>
-          <div className="text-xs text-parch/70 mt-1 font-bold tracking-wider">Wave {wave} · {score.toLocaleString()} score</div>
+          <h2 className="font-display font-black text-3xl text-goldbright text-emboss mt-1">GAME PAUSED</h2>
+          <div className="text-xs text-cyan-100/85 mt-1 font-bold tracking-wider">{ZONES[Math.max(0, wave - 1) % ZONES.length].name} · Wave {wave} · {score.toLocaleString()} score</div>
         </div>
 
-        <div className="flex flex-col gap-2 mt-5">
-          <button onClick={onResume} className="btn-gold clip-notch py-3 text-sm font-black">▶ RESUME THE HUNT</button>
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={onRestart} className="btn-dark clip-notch py-2.5 text-xs font-bold">↻ RESTART RUN</button>
-            <button onClick={onOpenSettings} className="btn-dark clip-notch py-2.5 text-xs font-bold flex items-center justify-center gap-1.5">
-              <span aria-hidden="true">⚙</span> SETTINGS
-            </button>
-          </div>
-          <button onClick={onMenu} className="btn-dark clip-notch py-2.5 text-xs font-bold text-blood/90">⌂ ABANDON TO TITLE</button>
-        </div>
+        <div className="grid gap-3 lg:grid-cols-[150px_minmax(0,1fr)]">
+          <nav className="reference-pause-nav panel clip-notch p-2 flex flex-row lg:flex-col gap-1.5" aria-label="Pause menu">
+            <button onClick={onResume} className="reference-pause-nav-item reference-pause-resume btn-gold clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-black"><span className="text-xl">▶</span> RESUME</button>
+            <div className="reference-pause-nav-item flex items-center gap-3 px-3 py-3 text-[11px] font-bold text-parch"><span className="text-xl text-cyan-100">⚔</span> BUILD</div>
+            <div className="reference-pause-nav-item flex items-center gap-3 px-3 py-3 text-[11px] font-bold text-parch"><span className="text-xl text-cyan-100">♟</span> POWER-UPS</div>
+            <button onClick={onRestart} className="reference-pause-nav-item btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl text-goldbright">↻</span> RESTART</button>
+            <button onClick={onOpenSettings} className="reference-pause-nav-item btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl text-goldbright">⚙</span> SETTINGS</button>
+            <div className="reference-pause-nav-item flex items-center gap-3 px-3 py-3 text-[11px] font-bold text-parch"><span className="text-xl text-cyan-100">▣</span> HOW TO PLAY</div>
+            <button onClick={onMenu} className="reference-pause-nav-item reference-pause-abandon btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl">↪</span> ABANDON RUN</button>
+          </nav>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <section className="panel bg-abyss/60 p-3">
-            <h3 className="font-display text-[11px] tracking-[0.28em] text-gold mb-2">SKILLS</h3>
-            <div className="space-y-2 text-[11px] text-parch/80">
+          <div className="grid gap-3 md:grid-cols-2 min-w-0">
+          <section className="panel clip-notch bg-[rgba(5,14,24,0.92)] p-3 border-cyan-200/25">
+            <h3 className="font-display text-[11px] tracking-[0.28em] font-black text-goldbright mb-2">SKILLS</h3>
+            <div className="space-y-2 text-[11px] text-cyan-50/90">
               {skills.length === 0 ? <div className="text-faint">No active skills.</div> : skills.map((skill) => (
-                <div key={skill.id} className="border border-iron/80 p-2 rounded-sm bg-abyss/40">
-                  <div className="flex items-center justify-between gap-2"><span className="font-bold text-parch">{skill.name}</span><span className="text-[10px] uppercase tracking-[0.22em] text-faint">{skill.rarity}</span></div>
-                  <div className="mt-1 text-[10px] text-faint">Stacks: {skill.count}{skill.maxStacks ? ` / ${skill.maxStacks}` : ''}</div>
-                  <div className="mt-1 text-parch/90">{skill.valueText}</div>
+                <div key={skill.id} className="border border-cyan-200/20 p-2 rounded-sm bg-[#081522]/90">
+                  <div className="flex items-center justify-between gap-2"><span className="font-bold text-white">{skill.name}</span><span className="text-[10px] uppercase tracking-[0.22em] text-cyan-100/70">{skill.rarity}</span></div>
+                  <div className="mt-1 text-[10px] text-goldbright/90">Stacks: {skill.count}{skill.maxStacks ? ` / ${skill.maxStacks}` : ''}</div>
+                  <div className="mt-1 text-cyan-50/90">{skill.valueText}</div>
                 </div>
               ))}
             </div>
           </section>
 
-          <section className="panel bg-abyss/60 p-3">
-            <h3 className="font-display text-[11px] tracking-[0.28em] text-gold mb-2">TOTAL BUILD STATS</h3>
-            <div className="space-y-2 text-[11px] text-parch/80">
-              {totalStats.map((stat) => <div key={stat.label} className="flex items-center justify-between gap-2 border-b border-iron/70 pb-1"><span>{stat.label}</span><span className="font-bold text-parch">{stat.value}</span></div>)}
+          <section className="panel clip-notch bg-[rgba(5,14,24,0.92)] p-3 border-cyan-200/25">
+            <h3 className="font-display text-[11px] tracking-[0.28em] font-black text-goldbright mb-2">TOTAL BUILD STATS</h3>
+            <div className="space-y-1.5 text-[11px] text-cyan-50/90">
+              {totalStats.map((stat) => <div key={stat.label} className="flex items-center justify-between gap-2 border-b border-cyan-200/15 pb-1"><span>{stat.label}</span><span className="font-bold text-white">{stat.value}</span></div>)}
             </div>
           </section>
 
-          <section className="panel bg-abyss/60 p-3 md:col-span-2">
-            <h3 className="font-display text-[11px] tracking-[0.28em] text-gold mb-2">MARKETPLACE POWER-UPS</h3>
-            <div className="space-y-2 text-[11px] text-parch/80">
+          <section className="panel clip-notch bg-[rgba(5,14,24,0.92)] p-3 border-cyan-200/25 md:col-span-2">
+            <h3 className="font-display text-[11px] tracking-[0.28em] font-black text-goldbright mb-2">MARKETPLACE POWER-UPS</h3>
+            <div className="grid gap-2 md:grid-cols-2 text-[11px] text-cyan-50/90">
               {marketplacePowerups.length === 0 ? <div className="text-faint">No active marketplace power-ups.</div> : marketplacePowerups.map((entry, i) => (
-                <div key={`${entry.name}-${i}`} className="border border-iron/80 p-2 rounded-sm bg-abyss/40">
-                  <div className="flex items-center justify-between gap-2"><span className="font-bold text-parch">{entry.name}</span>{entry.count > 1 && <span className="text-[10px] text-faint">x{entry.count}</span>}</div>
-                  <div className="mt-1 text-parch/90">{entry.effect}</div>
-                  {entry.remainingSeconds !== null && <div className="mt-1 text-[10px] text-faint">Remaining: {entry.remainingSeconds.toFixed(1)}s</div>}
+                <div key={`${entry.name}-${i}`} className="border border-cyan-200/20 p-2 rounded-sm bg-[#081522]/90">
+                  <div className="flex items-center justify-between gap-2"><span className="font-bold text-white">{entry.name}</span>{entry.count > 1 && <span className="text-[10px] text-goldbright">x{entry.count}</span>}</div>
+                  <div className="mt-1 text-cyan-50/90">{entry.effect}</div>
+                  {entry.remainingSeconds !== null && <div className="mt-1 text-[10px] text-goldbright/90">Remaining: {entry.remainingSeconds.toFixed(1)}s</div>}
                 </div>
               ))}
             </div>
           </section>
         </div>
+        </div>
 
-        <div className="mt-5 border-t border-iron pt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] text-parch/80">
+        <div className="mt-3 border-t border-cyan-200/20 pt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] text-parch/80">
           <div><span className="kbd">WASD</span> move</div><div><span className="kbd">SPACE</span>/<span className="kbd">CLICK</span> attack</div>
           <div><span className="kbd">SHIFT</span> dash · i-frames</div><div><span className="kbd">E</span>/<span className="kbd">R-CLICK</span> signature</div>
           <div><span className="kbd">Q</span> legacy ability</div><div><span className="kbd">ESC</span>/<span className="kbd">P</span> pause</div><div><span className="kbd">M</span> mute</div>
         </div>
 
-        <div className="mt-5 border-t border-iron pt-4">
-          <div className="flex items-center justify-between gap-3 mb-3"><h3 className="font-display text-[11px] tracking-[0.3em] text-gold">CURRENT BUILD</h3><div className="flex gap-2">
-            <button type="button" onClick={() => setBuildTab('skills')} className={`px-2.5 py-1 text-[10px] font-display tracking-[0.2em] clip-notch-sm border ${buildTab === 'skills' ? 'bg-gold/15 text-goldbright border-gold/60' : 'bg-abyss/30 text-faint border-iron'}`}>SKILLS</button>
-            <button type="button" onClick={() => setBuildTab('marketplace')} className={`px-2.5 py-1 text-[10px] font-display tracking-[0.2em] clip-notch-sm border ${buildTab === 'marketplace' ? 'bg-gold/15 text-goldbright border-gold/60' : 'bg-abyss/30 text-faint border-iron'}`}>MARKETPLACE</button>
-          </div></div>
-          <div className="max-h-[28rem] overflow-y-auto pr-1">
-            {buildTab === 'skills' ? <div className="space-y-2.5 text-[11px] text-parch/80">{skills.length === 0 ? <div className="panel bg-abyss/50 border border-iron/80 p-3 text-faint">No skills acquired</div> : skills.map((skill) => <div key={skill.id} className="panel bg-abyss/50 border border-iron/80 p-2.5"><div className="flex items-start justify-between gap-2"><div><div className="font-bold text-parch text-sm leading-tight">{skill.name}</div><div className="mt-1 text-[9px] uppercase tracking-[0.2em] text-faint">{skill.rarity}</div></div>{skill.maxStacks && <div className="text-[10px] text-goldbright font-bold whitespace-nowrap">Stacks: {skill.count}/{skill.maxStacks}</div>}</div><div className="mt-2 text-parch/90 leading-relaxed">{skill.valueText}</div></div>)}</div> : <div className="space-y-2.5 text-[11px] text-parch/80">{marketplacePowerups.length === 0 ? <div className="panel bg-abyss/50 border border-iron/80 p-3 text-faint">No active marketplace effects</div> : marketplacePowerups.map((entry, i) => <div key={`${entry.name}-${i}`} className="panel bg-abyss/50 border border-iron/80 p-2.5"><div className="flex items-start justify-between gap-2"><div><div className="font-bold text-parch text-sm leading-tight">{entry.name}</div>{entry.count > 1 && <div className="mt-1 text-[9px] uppercase tracking-[0.2em] text-faint">x{entry.count}</div>}</div>{entry.remainingSeconds !== null ? <div className="text-[10px] text-goldbright font-bold whitespace-nowrap">ACTIVE · {formatRemainingTime(entry.remainingSeconds)} remaining</div> : <div className="text-[10px] text-verdant font-bold whitespace-nowrap">PERMANENT</div>}</div><div className="mt-2 text-parch/90 leading-relaxed">{entry.effect}</div></div>)}</div>}
-          </div>
-        </div>
-
-        <div className="mt-4"><h3 className="font-display text-[11px] tracking-[0.3em] text-gold mb-1.5">HALL OF LEGENDS</h3><Leaderboard scores={scores} activeProfileId={activeProfileId} compact /></div>
       </div>
     </div>
   );
@@ -113,7 +92,7 @@ export function PauseOverlay(props: Props) {
   const realm = ZONES[Math.max(0, wave - 1) % ZONES.length].name;
 
   if (!vp.coarse) {
-    return <DesktopPauseLayout {...props} />;
+    return <ReferenceDesktopPauseLayout {...props} />;
   }
 
   return (
