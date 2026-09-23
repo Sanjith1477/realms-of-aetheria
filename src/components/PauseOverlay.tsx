@@ -29,8 +29,6 @@ function ReferenceDesktopPauseLayout({ wave, score, skills, totalStats, marketpl
         <div className="grid gap-3 lg:grid-cols-[150px_minmax(0,1fr)]">
           <nav className="reference-pause-nav panel clip-notch p-2 flex flex-row lg:flex-col gap-1.5" aria-label="Pause menu">
             <button onClick={onResume} className="reference-pause-nav-item reference-pause-resume btn-gold clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-black"><span className="text-xl">▶</span> RESUME</button>
-            <div className="reference-pause-nav-item flex items-center gap-3 px-3 py-3 text-[11px] font-bold text-parch"><span className="text-xl text-cyan-100">⚔</span> BUILD</div>
-            <div className="reference-pause-nav-item flex items-center gap-3 px-3 py-3 text-[11px] font-bold text-parch"><span className="text-xl text-cyan-100">♟</span> POWER-UPS</div>
             <button onClick={onRestart} className="reference-pause-nav-item btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl text-goldbright">↻</span> RESTART</button>
             <button onClick={onOpenSettings} className="reference-pause-nav-item btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl text-goldbright">⚙</span> SETTINGS</button>
             <button onClick={onOpenTutorial} className="reference-pause-nav-item btn-dark clip-notch flex items-center gap-3 px-3 py-3 text-[11px] font-bold"><span className="text-xl text-cyan-100">▣</span> TUTORIAL</button>
