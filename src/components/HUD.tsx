@@ -197,7 +197,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
 
       {/* top row */}
       <div
-        className={`absolute top-0 left-0 right-0 flex items-start justify-between gap-1 sm:gap-2 px-1 sm:px-3 ${isTouch ? 'h-[116px]' : ''}`}
+        className={`absolute top-0 left-0 right-0 flex items-start justify-between gap-1 sm:gap-2 px-1 sm:px-3 ${isTouch ? 'h-[140px]' : ''}`}
         style={{ paddingTop: 'calc(4px + env(safe-area-inset-top))' }}
       >
         {/* player frame */}
@@ -208,7 +208,7 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
             padding: isTouch ? '7px 9px' : compact ? '5px 6px' : '9px 11px',
             background: 'linear-gradient(135deg, rgba(7,16,28,0.96), rgba(11,25,38,0.94))',
             boxShadow: '0 5px 18px rgba(0,0,0,0.28), 0 0 16px rgba(70,200,220,0.08)',
-            ...(isTouch ? { position: 'absolute', left: 4, top: 53 } : {}),
+            ...(isTouch ? { position: 'absolute', left: 4, top: 77 } : {}),
           }}
         >
           <div className="flex items-center gap-1.5 sm:gap-2">

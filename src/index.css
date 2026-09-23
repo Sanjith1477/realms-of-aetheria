@@ -144,6 +144,36 @@ canvas {
     transform: translateY(1px);
   }
 
+  .pause-actions {
+    padding: 10px;
+    border: 1px solid #6b5a33;
+    background: rgba(5, 11, 19, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.08), 0 10px 28px rgba(0, 0, 0, 0.32);
+  }
+  .pause-action {
+    min-height: 142px;
+    border-width: 1px;
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.75);
+  }
+  .pause-action-primary {
+    box-shadow: 0 3px 0 #7c5f1e, 0 0 20px rgba(230, 180, 92, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    text-shadow: none;
+  }
+  .pause-action-danger {
+    color: #e05252;
+    border-color: rgba(224, 82, 82, 0.72);
+    background: linear-gradient(180deg, #211a24 0%, #17131c 100%);
+  }
+  .pause-action-danger:hover {
+    border-color: #ff7777;
+    color: #ff8d8d;
+  }
+  @media (max-width: 639px) {
+    .pause-action {
+      min-height: 92px;
+    }
+  }
+
   .kbd {
     font-family: var(--font-body);
     font-weight: 700;
