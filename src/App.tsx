@@ -34,6 +34,8 @@ import {
   setPreferredClass,
   signInWithUsername,
   signUpWithUsername,
+  requestPasswordReset,
+  updatePassword,
   subscribeToRuns,
   type WorldEvent,
 } from './lib/api';
@@ -70,6 +72,7 @@ export default function App() {
     const profile = getActiveProfile();
     return !profile || !profile.passwordHash;
   });
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [cloudStatus, setCloudStatus] = useState<{ ok: boolean; message: string }>({
     ok: false,
     message: cloud ? 'Checking connection…' : 'No .env — running offline on localStorage only.',
@@ -158,14 +161,14 @@ export default function App() {
   useEffect(() => {
     if (!cloud || !supabase) return;
     let alive = true;
-    const applyCloudUser = async () => {
+    const applyCloudUser = async (keepAccountPanel = false) => {
       const { data } = await currentProfile();
       if (!alive) return;
       if (data) {
         const mapped = await hydrateProfile(data);
         if (!alive) return;
         setActiveProfileState(mapped);
-        setAccountPanelOpen(false);
+        if (!keepAccountPanel) setAccountPanelOpen(false);
       } else {
         setActiveProfileState(null);
         setAccountPanelOpen(true);
@@ -180,8 +183,11 @@ export default function App() {
       setScores(board.scores);
     };
     void applyCloudUser();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      void applyCloudUser();
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      const isRecovery = event === 'PASSWORD_RECOVERY';
+      setPasswordRecovery(isRecovery);
+      if (isRecovery) setAccountPanelOpen(true);
+      void applyCloudUser(isRecovery);
     });
     return () => {
       alive = false;
@@ -579,6 +585,20 @@ export default function App() {
     return null;
   };
 
+  const sendPasswordReset = async (email: string) => {
+    const result = await requestPasswordReset(email);
+    return result.error;
+  };
+
+  const resetCloudPassword = async (password: string, confirmation: string) => {
+    if (!password || !confirmation) return 'Enter and confirm your new password.';
+    if (password !== confirmation) return 'Passwords do not match.';
+    const result = await updatePassword(password);
+    if (result.error) return result.error;
+    setPasswordRecovery(false);
+    return null;
+  };
+
   const setPassword = async (id: string, password: string, confirmation: string) => {
     const result = await setProfilePassword(id, password, confirmation);
     if (!result.profile) return result.error ?? 'Could not save password.';
@@ -823,6 +843,9 @@ export default function App() {
           onCreate={createAccount}
           onLogin={selectAccount}
           onSetPassword={setPassword}
+          onRequestPasswordReset={cloud ? sendPasswordReset : undefined}
+          onUpdatePassword={cloud ? resetCloudPassword : undefined}
+          recoveryMode={passwordRecovery}
           onClose={() => setAccountPanelOpen(false)}
         />
       )}
