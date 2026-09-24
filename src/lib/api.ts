@@ -98,20 +98,6 @@ export async function signInWithUsername(username: string, password: string) {
   return { data: profile.data, error: profile.error } as const;
 }
 
-export async function requestPasswordReset(email: string) {
-  if (!isSupabaseConfigured || !supabase) return unavailable();
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: `${window.location.origin}${window.location.pathname}`,
-  });
-  return { data: error ? null : true, error: error?.message ?? null } as const;
-}
-
-export async function updatePassword(password: string) {
-  if (!isSupabaseConfigured || !supabase) return unavailable();
-  const { error } = await supabase.auth.updateUser({ password });
-  return { data: error ? null : true, error: error?.message ?? null } as const;
-}
-
 export async function signOut() {
   if (!isSupabaseConfigured || !supabase) return;
   await supabase.auth.signOut();

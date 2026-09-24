@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import type { PlayerProfile } from '../game/highscores';
 import { ClassEmblem } from './ClassEmblem';
 
@@ -10,13 +10,10 @@ interface Props {
   onCreate: (name: string, password: string, confirmation: string) => Promise<string | null>;
   onLogin: (username: string, password: string) => Promise<string | null>;
   onSetPassword: (id: string, password: string, confirmation: string) => Promise<string | null>;
-  onRequestPasswordReset?: (email: string) => Promise<string | null>;
-  onUpdatePassword?: (password: string, confirmation: string) => Promise<string | null>;
-  recoveryMode?: boolean;
   onClose: () => void;
 }
 
-type Mode = 'login' | 'signup' | 'set-password' | 'recovery-email' | 'recovery-password';
+type Mode = 'login' | 'signup' | 'set-password';
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -33,7 +30,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 const inputClass =
   'w-full bg-[#070b12] border border-[#4a3d24] focus:border-goldbright outline-none rounded-sm px-3.5 py-3 text-parch font-medium tracking-wide shadow-[inset_0_2px_8px_rgba(0,0,0,0.55)] placeholder:text-[#5d6778]';
 
-export function AccountPanel({ profiles, activeProfile, cloudStatus, required = false, onCreate, onLogin, onSetPassword, onRequestPasswordReset, onUpdatePassword, recoveryMode = false, onClose }: Props) {
+export function AccountPanel({ profiles, activeProfile, cloudStatus, required = false, onCreate, onLogin, onSetPassword, onClose }: Props) {
   const [mode, setMode] = useState<Mode>(profiles.length ? 'login' : 'signup');
   const [username, setUsername] = useState(() => {
     try {
@@ -49,47 +46,21 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [legacyId, setLegacyId] = useState('');
-  const [email, setEmail] = useState('');
-  const [notice, setNotice] = useState('');
-
-  useEffect(() => {
-    if (recoveryMode) setMode('recovery-password');
-  }, [recoveryMode]);
 
   const setModeSafe = (next: Mode) => {
     setMode(next);
     setError('');
-    setNotice('');
     setPassword('');
     setConfirmation('');
     setShowPass(false);
-  };
-
-  const submitRecoveryEmail = async () => {
-    if (!email.trim()) return 'Enter your email address.';
-    if (!onRequestPasswordReset) return 'Password recovery is unavailable.';
-    return onRequestPasswordReset(email);
   };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError('');
-    setNotice('');
     let message: string | null = null;
-    if (mode === 'recovery-email') {
-      message = await submitRecoveryEmail();
-      if (!message) setNotice('If an account uses that email, a recovery link is on its way.');
-    } else if (mode === 'recovery-password') {
-      if (!password || !confirmation) message = 'Enter and confirm your new password.';
-      else if (password !== confirmation) message = 'Passwords do not match.';
-      else if (!onUpdatePassword) message = 'Password recovery is unavailable.';
-      else message = await onUpdatePassword(password, confirmation);
-      if (!message) {
-        setModeSafe('login');
-        setNotice('Password updated. You can now sign in.');
-      }
-    } else if (mode === 'signup') message = await onCreate(username, password, confirmation);
+    if (mode === 'signup') message = await onCreate(username, password, confirmation);
     else if (mode === 'set-password') message = await onSetPassword(legacyId, password, confirmation);
     else message = await onLogin(username, password);
     setBusy(false);
@@ -121,8 +92,6 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
 
   const isSignup = mode === 'signup';
   const isSetPw = mode === 'set-password';
-  const isRecoveryEmail = mode === 'recovery-email';
-  const isRecoveryPassword = mode === 'recovery-password';
 
   return (
     <div className="absolute inset-0 z-[60] flex items-center justify-center px-3 py-5 overflow-y-auto">
@@ -141,17 +110,13 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
           </div>
           <div className="font-display text-[10px] tracking-[0.5em] text-gold/80">AETHERIA REALM GATE</div>
           <h2 className="font-display font-black text-[clamp(30px,8vw,46px)] leading-none text-goldbright text-emboss mt-1.5">
-            {isSignup ? 'CREATE ACCOUNT' : isSetPw ? 'SECURE ACCOUNT' : isRecoveryEmail ? 'RESET PASSWORD' : isRecoveryPassword ? 'SET NEW PASSWORD' : 'SIGN IN'}
+            {isSignup ? 'CREATE ACCOUNT' : isSetPw ? 'SECURE ACCOUNT' : 'SIGN IN'}
           </h2>
           <p className="text-[12.5px] text-parch/70 mt-2.5 px-4">
             {isSignup
               ? 'Choose the name that will carry your legend on the leaderboard.'
               : isSetPw
                 ? 'Set a password for this existing adventurer.'
-                : isRecoveryEmail
-                  ? 'Enter your email and we will send a recovery link.'
-                  : isRecoveryPassword
-                    ? 'Choose a new password for your adventurer.'
                 : 'Welcome back, adventurer. The realms have missed you.'}
           </p>
         </div>
@@ -164,13 +129,7 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
 
           <div className="bg-[#0d131d] px-5 py-6 sm:px-7">
             <form onSubmit={submit} className="flex flex-col gap-4">
-              {isRecoveryEmail && (
-                <Field label="EMAIL">
-                  <input value={email} type="email" autoFocus autoComplete="email" onChange={(e) => setEmail(e.target.value)} placeholder="Your email address" className={inputClass} />
-                </Field>
-              )}
-
-              {!isSetPw && !isRecoveryEmail && !isRecoveryPassword && (
+              {!isSetPw && (
                 <Field label="USERNAME" hint={isSignup ? '3–16 characters' : undefined}>
                   <input
                     value={username}
@@ -190,7 +149,7 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
                 </div>
               )}
 
-              {!isRecoveryEmail && <Field label="PASSWORD" hint={mode === 'login' ? undefined : '8+ chars · upper, lower, number'}>
+              <Field label="PASSWORD" hint={mode === 'login' ? undefined : '8+ chars · upper, lower, number'}>
                 <input
                   type={showPass ? 'text' : 'password'}
                   value={password}
@@ -207,9 +166,9 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
                 >
                   {showPass ? 'HIDE' : 'SHOW'}
                 </button>
-              </Field>}
+              </Field>
 
-              {mode !== 'login' && !isRecoveryEmail && (
+              {mode !== 'login' && (
                 <Field label="CONFIRM PASSWORD">
                   <input
                     type={showPass ? 'text' : 'password'}
@@ -230,14 +189,7 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
                 </label>
               )}
 
-              {mode === 'login' && (
-                <button type="button" onClick={() => setModeSafe('recovery-email')} className="self-center text-[12px] text-goldbright hover:text-gold underline underline-offset-4 decoration-gold/40 -mt-2">
-                  Forgot Password?
-                </button>
-              )}
-
               {error && <div className="text-[12px] text-[#ff8a8a] bg-[#3a1518]/70 border border-[#7a2b2b] px-3 py-2 rounded-sm">{error}</div>}
-              {notice && <div className="text-[12px] text-[#9fe4c5] bg-[#123128]/70 border border-[#28634e] px-3 py-2 rounded-sm">{notice}</div>}
 
               <button
                 type="submit"
@@ -245,19 +197,19 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
                 className="btn-gold w-full py-3.5 text-sm font-black tracking-[0.18em] disabled:opacity-50"
                 style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
               >
-                {busy ? 'AUTHENTICATING…' : isSignup ? 'CREATE ACCOUNT' : isSetPw ? 'SAVE PASSWORD' : isRecoveryEmail ? 'SEND RECOVERY LINK' : isRecoveryPassword ? 'UPDATE PASSWORD' : 'ENTER REALM'}
+                {busy ? 'AUTHENTICATING…' : isSignup ? 'CREATE ACCOUNT' : isSetPw ? 'SAVE PASSWORD' : 'ENTER REALM'}
               </button>
             </form>
 
             {/* switch link */}
-            {!isSetPw && !isRecoveryPassword && (
+            {!isSetPw && (
               <div className="mt-5 pt-4 border-t border-[#2a3344] text-center">
                 <span className="text-[12px] text-faint">{isSignup ? 'Already have an account?' : 'New to Aetheria?'} </span>
                 <button
-                  onClick={() => setModeSafe(isRecoveryEmail ? 'login' : isSignup ? 'login' : 'signup')}
+                  onClick={() => setModeSafe(isSignup ? 'login' : 'signup')}
                   className="text-[12px] font-display font-bold tracking-[0.12em] text-goldbright hover:text-gold underline underline-offset-4 decoration-gold/40 ml-1"
                 >
-                  {isRecoveryEmail ? 'BACK TO SIGN IN' : isSignup ? 'SIGN IN' : 'SIGN UP'}
+                  {isSignup ? 'SIGN IN' : 'SIGN UP'}
                 </button>
               </div>
             )}
@@ -265,13 +217,6 @@ export function AccountPanel({ profiles, activeProfile, cloudStatus, required = 
               <div className="mt-5 pt-4 border-t border-[#2a3344] text-center">
                 <button onClick={() => setModeSafe('login')} className="text-[12px] font-display font-bold tracking-[0.12em] text-goldbright hover:text-gold underline underline-offset-4 decoration-gold/40">
                   ← BACK TO SIGN IN
-                </button>
-              </div>
-            )}
-            {isRecoveryPassword && (
-              <div className="mt-5 pt-4 border-t border-[#2a3344] text-center">
-                <button onClick={() => setModeSafe('login')} className="text-[12px] font-display font-bold tracking-[0.12em] text-goldbright hover:text-gold underline underline-offset-4 decoration-gold/40">
-                  BACK TO SIGN IN
                 </button>
               </div>
             )}
