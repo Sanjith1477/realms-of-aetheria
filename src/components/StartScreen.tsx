@@ -136,7 +136,7 @@ export function StartScreen({
         {/* logo */}
         <div className="text-center mt-3 sm:mt-5 anim-fade-up" style={{ animationDelay: '60ms' }}>
           <h1 className="font-display font-black text-gold text-emboss leading-none text-[clamp(30px,7vw,68px)] tracking-[0.06em]">REALMS OF AETHERIA</h1>
-          <div className="mt-2 text-[10px] sm:text-xs tracking-[0.42em] text-faint font-bold uppercase">Eight legends · five cultures · endless waves</div>
+          <div className="mt-2 text-[10px] sm:text-xs tracking-[0.42em] text-faint font-bold uppercase">Eight legends · five cultures · 120 waves</div>
         </div>
 
         <main className="w-full max-w-6xl grid lg:grid-cols-[1.04fr_0.96fr] gap-3 sm:gap-4 mt-4 sm:mt-6">
