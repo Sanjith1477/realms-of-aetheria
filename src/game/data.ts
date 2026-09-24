@@ -349,6 +349,10 @@ export type PowerId =
   | 'royal_treasury'
   | 'aetherborn_form'
   | 'undying_legend'
+  | 'aether_insight'
+  | 'late_aether_surge'
+  | 'late_void_horizon'
+  | 'late_starfall'
   // Mechanical archetype powers
   | 'piercing_edge'
   | 'impact_shockwave'
@@ -458,6 +462,7 @@ export const POWER_STACK_LIMITS: Partial<Record<PowerId, number>> = {
   royal_treasury: 1,
   aetherborn_form: 1,
   undying_legend: 1,
+  aether_insight: 5,
   piercing_edge: 1,
   kinetic_knockback: 3,
   frenzy_momentum: 3,
@@ -653,6 +658,26 @@ export const POWERS: PowerDef[] = [
     id: 'undying_legend', name: 'Undying Legend', kicker: 'IMMORTALITY',
     desc: '+35 max health, heal 6 per kill and take 15% less damage.', color: '#a8ffd1', icon: 'shield',
     rarity: 'legendary', recommended: ['shieldthane', 'tidecaller', 'jaguar'], stacks: 'Health/lifesteal additive · armor max 65% · one-time',
+  },
+  {
+    id: 'aether_insight', name: 'Aether Insight', kicker: 'PROGRESSION',
+    desc: '+15% experience from defeated foes. The Aether reveals more of its path.', color: '#7de7ff', icon: 'eye',
+    rarity: 'rare', recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade'], stacks: 'Experience additive · max 5', maxStacks: 5,
+  },
+  {
+    id: 'late_aether_surge', name: 'Aether Surge', kicker: 'LATE AWAKENING',
+    desc: '+8% weapon damage and +8% movement speed. Power continues to answer.', color: '#8fffe0', icon: 'bolt',
+    rarity: 'common', recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade'], stacks: 'Repeatable late-game reserve',
+  },
+  {
+    id: 'late_void_horizon', name: 'Void Horizon', kicker: 'LATE AWAKENING',
+    desc: '+10% weapon damage and +5% critical chance. Nothing lies beyond your reach.', color: '#d7adff', icon: 'sun',
+    rarity: 'rare', recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade'], stacks: 'Repeatable late-game reserve',
+  },
+  {
+    id: 'late_starfall', name: 'Starfall Engine', kicker: 'LATE AWAKENING',
+    desc: '+12% attack speed and +4% critical chance. The final stars align.', color: '#ffd36b', icon: 'bolt',
+    rarity: 'epic', recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade'], stacks: 'Repeatable late-game reserve',
   },
   // Mechanical archetype powers
   {
@@ -888,7 +913,7 @@ export const SHOP_ITEMS: ShopItemDef[] = [
     name: 'Field Rations',
     kicker: 'ONE USE',
     desc: 'Restore 48 health before the next assault.',
-    cost: 10,
+    cost: 100,
     color: '#9defa4',
     icon: 'heart',
     rarity: 'common', recommended: ['shieldthane', 'tidecaller', 'jaguar'], duration: 'Immediate',
@@ -898,7 +923,7 @@ export const SHOP_ITEMS: ShopItemDef[] = [
     name: 'Sun Tonic',
     kicker: 'ONE USE',
     desc: 'Gain Empowered for 18 seconds (+50% damage).',
-    cost: 18,
+    cost: 250,
     color: '#ffd36b',
     icon: 'sun',
     rarity: 'common', recommended: ['kensei', 'jaguar', 'riftblade'], duration: '18 seconds',
@@ -908,7 +933,7 @@ export const SHOP_ITEMS: ShopItemDef[] = [
     name: 'Tempered Steel',
     kicker: 'PERMANENT',
     desc: '+14% weapon damage for the rest of this run.',
-    cost: 26,
+    cost: 5000,
     color: '#ff9e88',
     icon: 'blade',
     rarity: 'rare', recommended: ['kensei', 'jaguar', 'riftblade'], duration: 'Rest of run · stacks',
@@ -918,7 +943,7 @@ export const SHOP_ITEMS: ShopItemDef[] = [
     name: 'Wayfarer Boots',
     kicker: 'PERMANENT',
     desc: '+10% movement speed for the rest of this run.',
-    cost: 22,
+    cost: 300,
     color: '#78e0d0',
     icon: 'boot',
     rarity: 'common', recommended: ['sandseer', 'riftblade', 'jaguar'], duration: 'Rest of run · stacks',
@@ -928,7 +953,7 @@ export const SHOP_ITEMS: ShopItemDef[] = [
     name: 'Moonward Charm',
     kicker: 'PERMANENT',
     desc: '+18 max health and restore 18 health now.',
-    cost: 24,
+    cost: 4500,
     color: '#b1c5df',
     icon: 'shield',
     rarity: 'rare', recommended: ['shieldthane', 'tidecaller'], duration: 'Rest of run · stacks',
@@ -938,39 +963,39 @@ export const SHOP_ITEMS: ShopItemDef[] = [
     name: 'Astral Sigil',
     kicker: 'ONE USE',
     desc: 'Fully refresh your signature ability now.',
-    cost: 16,
+    cost: 3000,
     color: '#d7adff',
     icon: 'spark',
     rarity: 'rare', recommended: ['sandseer', 'tidecaller', 'shieldthane'], duration: 'Immediate',
   },
   {
     id: 'whetstone', name: 'Obsidian Whetstone', kicker: 'PERMANENT',
-    desc: '+7% critical chance and +8% weapon damage.', cost: 34, color: '#ff907d', icon: 'blade',
+    desc: '+7% critical chance and +8% weapon damage.', cost: 5500, color: '#ff907d', icon: 'blade',
     rarity: 'rare', recommended: ['kensei', 'jaguar', 'riftblade'], duration: 'Rest of run · stacks',
   },
   {
     id: 'hourglass', name: 'Chronicle Hourglass', kicker: 'PERMANENT',
-    desc: 'Signature and Legacy cooldowns are 14% shorter.', cost: 38, color: '#8fe7ff', icon: 'spark',
+    desc: 'Signature and Legacy cooldowns are 14% shorter.', cost: 7000, color: '#8fe7ff', icon: 'spark',
     rarity: 'epic', recommended: ['sandseer', 'tidecaller', 'riftblade'], duration: 'Rest of run · stacks',
   },
   {
     id: 'magnet', name: 'Gilded Lodestone', kicker: 'PERMANENT',
-    desc: '+50% coin value and +60 pickup range.', cost: 30, color: '#ffd24a', icon: 'spark',
+    desc: '+50% coin value and +60 pickup range.', cost: 5000, color: '#ffd24a', icon: 'spark',
     rarity: 'rare', recommended: ['sandseer', 'tidecaller'], duration: 'Rest of run · stacks',
   },
   {
     id: 'elixir', name: 'Phoenix Elixir', kicker: 'ONE USE',
-    desc: 'Fully restore health and gain +20 max health.', cost: 48, color: '#ff856b', icon: 'heart',
+    desc: 'Fully restore health and gain +20 max health.', cost: 6500, color: '#ff856b', icon: 'heart',
     rarity: 'epic', recommended: ['shieldthane', 'jaguar', 'tidecaller'], duration: 'Immediate + permanent health',
   },
   {
     id: 'prism', name: 'Legacy Prism', kicker: 'ONE USE',
-    desc: 'Fully refresh both Signature and Legacy abilities.', cost: 42, color: '#d7adff', icon: 'spark',
+    desc: 'Fully refresh both Signature and Legacy abilities.', cost: 7500, color: '#d7adff', icon: 'spark',
     rarity: 'epic', recommended: ['sandseer', 'tidecaller', 'riftblade'], duration: 'Immediate',
   },
   {
     id: 'war_banner', name: 'Banner of Six Realms', kicker: 'PERMANENT',
-    desc: '+18% damage, +10% movement speed and +15 max health.', cost: 65, color: '#ffd36b', icon: 'sun',
+    desc: '+18% damage, +10% movement speed and +15 max health.', cost: 12000, color: '#ffd36b', icon: 'sun',
     rarity: 'legendary', recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade'], duration: 'Rest of run · stacks',
   },
 ];

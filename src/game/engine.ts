@@ -140,7 +140,7 @@ interface Player {
   x: number; y: number; vx: number; vy: number; r: number;
   hp: number; maxHp: number; speed: number; dmgMul: number;
   attackRate: number; abilityRate: number; dashRate: number; critBonus: number; rangeBonus: number;
-  lifesteal: number; coinMult: number; pickupRange: number; armor: number;
+  lifesteal: number; coinMult: number; pickupRange: number; armor: number; xpMult: number;
   atkT: number; swingT: number; swingDur: number; swingAim: number; swingApplied: boolean;
   facing: number; aim: number;
   dashT: number; dashCd: number; dashX: number; dashY: number;
@@ -559,7 +559,7 @@ export class Game {
       x: ARENA_W / 2, y: ARENA_H / 2, vx: 0, vy: 0, r: 16,
       hp: cls.hp, maxHp: cls.hp, speed: cls.speed, dmgMul: 1,
       attackRate: 1, abilityRate: 1, dashRate: 1, critBonus: 0, rangeBonus: 0,
-      lifesteal: 0, coinMult: 1, pickupRange: 120, armor: 0,
+      lifesteal: 0, coinMult: 1, pickupRange: 120, armor: 0, xpMult: 1,
       atkT: 0, swingT: -1, swingDur: 0.16, swingAim: 0, swingApplied: true,
       facing: 0, aim: 0,
       dashT: 0, dashCd: 0, dashX: 1, dashY: 0,
@@ -1051,6 +1051,8 @@ export class Game {
       return 'utility';
     };
 
+    const isValid = (power: PowerDef) => !power.id.startsWith('late_') || level >= 72;
+
     let attempts = 0;
     while (chosen.length < 3 && attempts < 60) {
       attempts++;
@@ -1062,7 +1064,7 @@ export class Game {
         legendary: 0,
       };
       for (const candidate of POWERS) {
-        if (chosen.some((c) => c.id === candidate.id) || !isPowerAvailable(candidate.id, ownedPowerIds)) continue;
+        if (chosen.some((c) => c.id === candidate.id) || !isValid(candidate) || !isPowerAvailable(candidate.id, ownedPowerIds)) continue;
         if (!isRarityUnlocked(candidate.rarity, level)) continue;
         if (candidate.id.startsWith('evo_') && !candidate.recommended.includes(cid)) continue;
         availableOdds[candidate.rarity] = baseOdds[candidate.rarity];
@@ -1071,6 +1073,7 @@ export class Game {
       // Priority weighting: legend-specific evolutions have high affinity for that legend
       let pool = POWERS.filter((power) => {
         if (chosen.some((c) => c.id === power.id)) return false;
+        if (!isValid(power)) return false;
         if (!isPowerAvailable(power.id, ownedPowerIds)) return false;
         // Locked rarities can never enter the pool, regardless of evo affinity
         if (!isRarityUnlocked(power.rarity, level)) return false;
@@ -1081,6 +1084,7 @@ export class Game {
       if (!pool.length) {
         pool = POWERS.filter((power) => {
           if (chosen.some((c) => c.id === power.id)) return false;
+          if (!isValid(power)) return false;
           if (!isPowerAvailable(power.id, ownedPowerIds)) return false;
           if (!isRarityUnlocked(power.rarity, level)) return false;
           if (power.id.startsWith('evo_')) return power.recommended.includes(cid);
@@ -1102,7 +1106,7 @@ export class Game {
 
     // Safety fallback (still restricted to unlocked rarities)
     while (chosen.length < 3) {
-      const fallback = POWERS.find((pow) => !chosen.some((c) => c.id === pow.id) && isPowerAvailable(pow.id, ownedPowerIds) && (!pow.id.startsWith('evo_') || pow.recommended.includes(cid)) && isRarityUnlocked(pow.rarity, level));
+      const fallback = POWERS.find((pow) => !chosen.some((c) => c.id === pow.id) && isValid(pow) && isPowerAvailable(pow.id, ownedPowerIds) && (!pow.id.startsWith('evo_') || pow.recommended.includes(cid)) && isRarityUnlocked(pow.rarity, level));
       if (fallback) chosen.push(fallback);
       else break;
     }
@@ -1230,6 +1234,21 @@ export class Game {
         p.hp = Math.min(p.maxHp, p.hp + 35);
         p.lifesteal += 6;
         p.armor = Math.min(0.65, p.armor + 0.15);
+        break;
+      case 'aether_insight':
+        p.xpMult += 0.15;
+        break;
+      case 'late_aether_surge':
+        p.dmgMul *= 1.08;
+        p.speed *= 1.08;
+        break;
+      case 'late_void_horizon':
+        p.dmgMul *= 1.1;
+        p.critBonus += 0.05;
+        break;
+      case 'late_starfall':
+        p.attackRate *= 0.88;
+        p.critBonus += 0.04;
         break;
       // Mechanical Powers
       case 'piercing_edge':
@@ -2043,7 +2062,7 @@ export class Game {
       p.hp += healed;
       if (this.kills % 3 === 0 || p.riteT > 0) this.floater(p.x, p.y - 28, `+${healed}`, 12, p.riteT > 0 ? '#ffd24a' : '#9defa4');
     }
-    this.gainXp(def.xp * (e.elite ? 2 : 1));
+    this.gainXp(def.xp * (e.elite ? 2 : 1) * p.xpMult);
     this.burst(e.x, e.y, def.color, e.kind === 'boss' ? 46 : 16, e.kind === 'boss' ? 460 : 280, 'dot');
     this.burst(e.x, e.y, '#ffffff', 6, 240, 'spark');
     this.part(e.x, e.y, 0, 0, 0.45, e.r * 1.4, def.color, 'ring');
