@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { LevelUpData } from '../game/engine';
-import { RARITY_META, type PowerId } from '../game/data';
+import { EPIC_UNLOCK_LEVEL, LEGENDARY_UNLOCK_LEVEL, RARE_UNLOCK_LEVEL, RARITY_META, type PowerId } from '../game/data';
 import { PowerIcon } from './PowerIcon';
 import { RarityOdds } from './RarityOdds';
 
@@ -40,8 +40,8 @@ export function LevelUpOverlay({ data, onChoose, onOpenIndex, onReroll }: Props)
         <div className="mt-3">
           <RarityOdds
             odds={data.rarityOdds}
-            lockedLabels={{ legendary: 'LV 5' }}
-            hint="Odds improve every level · Common shrinks while Rare, Epic & Legendary grow · Legendary unlocks at Lv 5"
+            lockedLabels={{ rare: `LV ${RARE_UNLOCK_LEVEL}`, epic: `LV ${EPIC_UNLOCK_LEVEL}`, legendary: `LV ${LEGENDARY_UNLOCK_LEVEL}` }}
+            hint={`Odds improve every level · Rare unlocks at Lv ${RARE_UNLOCK_LEVEL} · Epic at Lv ${EPIC_UNLOCK_LEVEL} · Legendary at Lv ${LEGENDARY_UNLOCK_LEVEL}`}
           />
         </div>
 

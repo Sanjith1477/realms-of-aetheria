@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { ShopData } from '../game/engine';
-import { RARITY_META, type ShopItemId } from '../game/data';
+import { RARITY_META, SHOP_EPIC_UNLOCK_WAVE, SHOP_LEGENDARY_UNLOCK_WAVE, SHOP_RARE_UNLOCK_WAVE, type ShopItemId } from '../game/data';
 import { PowerIcon } from './PowerIcon';
 import { RarityOdds } from './RarityOdds';
 
@@ -103,8 +103,8 @@ export function ShopOverlay({ data, onBuy, onToggleLock, onOpenIndex, onReroll, 
           <div className="mt-3 rounded-lg border border-white/5 bg-black/30 px-3 py-2.5">
             <RarityOdds
               odds={data.rarityOdds}
-              lockedLabels={{ epic: 'WAVE 5', legendary: 'WAVE 10' }}
-              hint="Rations always stocked · Epic unlocks Wave 5 · Legendary unlocks Wave 10 · odds improve every wave"
+              lockedLabels={{ rare: `WAVE ${SHOP_RARE_UNLOCK_WAVE}`, epic: `WAVE ${SHOP_EPIC_UNLOCK_WAVE}`, legendary: `WAVE ${SHOP_LEGENDARY_UNLOCK_WAVE}` }}
+              hint={`Rations always stocked · Rare unlocks Wave ${SHOP_RARE_UNLOCK_WAVE} · Epic at Wave ${SHOP_EPIC_UNLOCK_WAVE} · Legendary at Wave ${SHOP_LEGENDARY_UNLOCK_WAVE}`}
             />
           </div>
 

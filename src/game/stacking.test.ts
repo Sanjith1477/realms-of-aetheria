@@ -1,7 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { capStackCount, getPowerStackCap, getShopItemStackCap, isPowerAvailable, POWERS, SHOP_ITEMS } from './data.ts';
+import {
+  capStackCount,
+  getPowerStackCap,
+  getShopItemStackCap,
+  isPowerAvailable,
+  isRarityUnlocked,
+  isShopRarityUnlocked,
+  rarityOddsForLevel,
+  shopRarityOddsForWave,
+  xpWithBonus,
+  canOpenLevelUp,
+  FINAL_WAVE,
+  MAX_PLAYER_LEVEL,
+  POWERS,
+  SHOP_ITEMS,
+} from './data.ts';
 
 test('power stacking caps are finite and enforced', () => {
   assert.equal(getPowerStackCap('keen_edge'), 3);
@@ -48,4 +63,40 @@ test('marketplace prices scale with item power and rarity', () => {
   assert.equal(prices.steel, 5000);
   assert.equal(prices.hourglass, 7000);
   assert.equal(prices.war_banner, 12000);
+});
+
+test('late-game progression caps and unlock gaps are fixed', () => {
+  assert.equal(FINAL_WAVE, 120);
+  assert.equal(MAX_PLAYER_LEVEL, 60);
+  assert.equal(isRarityUnlocked('rare', 11), false);
+  assert.equal(isRarityUnlocked('rare', 12), true);
+  assert.equal(isRarityUnlocked('epic', 27), false);
+  assert.equal(isRarityUnlocked('epic', 28), true);
+  assert.equal(isRarityUnlocked('legendary', 47), false);
+  assert.equal(isRarityUnlocked('legendary', 48), true);
+  assert.equal(isShopRarityUnlocked('rare', 19), false);
+  assert.equal(isShopRarityUnlocked('epic', 54), false);
+  assert.equal(isShopRarityUnlocked('legendary', 89), false);
+  assert.deepEqual(rarityOddsForLevel(60), rarityOddsForLevel(600));
+  assert.deepEqual(shopRarityOddsForWave(120), shopRarityOddsForWave(1200));
+});
+
+test('XP boost is per-run and additive to the existing multiplier', () => {
+  assert.equal(xpWithBonus(100, 1), 100);
+  assert.equal(xpWithBonus(100, 1.24), 124);
+  assert.equal(xpWithBonus(100, 0.5), 100);
+});
+
+test('level-up protection rejects max levels and empty drafts', () => {
+  assert.equal(canOpenLevelUp(MAX_PLAYER_LEVEL, 1, 3), false);
+  assert.equal(canOpenLevelUp(20, 1, 0), false);
+  assert.equal(canOpenLevelUp(20, 1, 3), true);
+});
+
+test('power and marketplace pools are expanded without removing the original content', () => {
+  assert.equal(POWERS.length, 174);
+  assert.equal(SHOP_ITEMS.length, 48);
+  assert.ok(POWERS.some((power) => power.id === 'aether_insight'));
+  assert.ok(SHOP_ITEMS.some((item) => item.id === 'xp_tome'));
+  assert.equal(getShopItemStackCap('xp_tome'), 5);
 });

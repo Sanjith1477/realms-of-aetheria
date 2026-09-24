@@ -13,6 +13,12 @@ import {
   getShopItemStackCap,
   isRarityUnlocked,
   isShopRarityUnlocked,
+  rarityOddsForLevel,
+  shopRarityOddsForWave,
+  xpWithBonus,
+  canOpenLevelUp,
+  FINAL_WAVE,
+  MAX_PLAYER_LEVEL,
   type ClassDef,
   type EnemyKind,
   type PowerDef,
@@ -765,8 +771,7 @@ export class Game {
     this.part(p.x, p.y, 0, 0, 0.65, 32, power.color, 'ring');
     this.pushFeed(`${power.name} attuned. ${power.desc}`, power.color);
     if (this.pendingLevels > 0) {
-      this.levelChoices = this.rollPowers(p.level);
-      this.opts.onState('levelup');
+      this.openLevelUp();
     } else {
       this.levelChoices = [];
       this.state = 'playing';
@@ -942,6 +947,15 @@ export class Game {
     this.shopPurchaseCounts.set(id, currentStacks + 1);
     // Buying an item unlocks it automatically.
     this.shopLocked.delete(id);
+    if (id.startsWith('expanded_shop_')) {
+      const effect = Number(id.split('_').pop()) % 6;
+      if (effect === 0) p.dmgMul *= 1.08;
+      else if (effect === 1) p.attackRate *= 0.92;
+      else if (effect === 2) p.speed *= 1.1;
+      else if (effect === 3) { p.maxHp += 18; p.hp = Math.min(p.maxHp, p.hp + 18); }
+      else if (effect === 4) p.critBonus += 0.06;
+      else p.coinMult += 0.35;
+    }
     switch (id) {
       case 'rations':
         p.hp = Math.min(p.maxHp, p.hp + 48);
@@ -1009,6 +1023,10 @@ export class Game {
         }
         this.sfx.play('levelup');
         break;
+      case 'xp_tome':
+        if (capStackCount(currentStacks + 1, stackCap) > currentStacks) p.xpMult += 0.12;
+        this.sfx.play('rune');
+        break;
     }
     this.shake(3);
     this.floater(p.x, p.y - 34, `${item.name.toUpperCase()}!`, 17, item.color, true);
@@ -1026,13 +1044,7 @@ export class Game {
   }
 
   private rarityOdds(level: number): Record<Rarity, number> {
-    const raw: Record<Rarity, number> = {
-      common: isRarityUnlocked('common', level) ? Math.max(0.72, 0.9 - Math.max(0, level - 1) * 0.038) : 0,
-      rare: isRarityUnlocked('rare', level) ? Math.max(0.08, 0.22 + Math.max(0, level - 4) * 0.02) : 0,
-      epic: isRarityUnlocked('epic', level) ? Math.max(0.02, 0.05 + Math.max(0, level - 8) * 0.012) : 0,
-      legendary: isRarityUnlocked('legendary', level) ? Math.max(0.01, (level - 13) * 0.008) : 0,
-    };
-    return normalizeRarityWeights(raw);
+    return rarityOddsForLevel(level);
   }
 
   private rollPowers(level: number): PowerDef[] {
@@ -1124,8 +1136,30 @@ export class Game {
 
   private openLevelUp() {
     const p = this.p;
-    if (!p) return;
+    if (!p || p.level >= MAX_PLAYER_LEVEL || this.pendingLevels <= 0) {
+      this.pendingLevels = 0;
+      this.levelChoices = [];
+      if (this.state === 'levelup') {
+        this.state = 'playing';
+        this.music.duck(false);
+        this.opts.onState('playing');
+      }
+      return;
+    }
     this.levelChoices = this.rollPowers(p.level);
+    if (!canOpenLevelUp(p.level, this.pendingLevels, this.levelChoices.length)) {
+      if (p.level >= MAX_PLAYER_LEVEL || this.pendingLevels <= 0) {
+        this.pendingLevels = 0;
+        this.levelChoices = [];
+        this.state = 'playing';
+        this.music.duck(false);
+        this.opts.onState('playing');
+        return;
+      }
+      this.pendingLevels = Math.max(0, this.pendingLevels - 1);
+      this.openLevelUp();
+      return;
+    }
     this.state = 'levelup';
     this.music.duck(true);
     this.announceSet(`LEVEL ${p.level} · CHOOSE YOUR PATH`);
@@ -1140,6 +1174,37 @@ export class Game {
     const shouldApply = stackCap === null || capStackCount(nextCount, stackCap) > currentCount;
     p.ownedPowerIds.push(id);
     if (!shouldApply) return;
+    if (id.startsWith('expanded_')) {
+      const [, category, rawIndex] = id.split('_');
+      const index = Number(rawIndex);
+      const effect = index % 5;
+      if (category === 'offense') {
+        if (effect === 0) p.dmgMul *= 1.09;
+        else if (effect === 1) p.critBonus += 0.05;
+        else if (effect === 2) p.rangeBonus += 18;
+        else if (effect === 3) p.attackRate *= 0.93;
+        else { p.dmgMul *= 1.12; p.rangeBonus += 8; }
+      } else if (category === 'defense') {
+        if (effect === 0) { p.maxHp += 20; p.hp = Math.min(p.maxHp, p.hp + 20); }
+        else if (effect === 1) p.armor = Math.min(0.65, p.armor + 0.06);
+        else if (effect === 2) p.lifesteal += 2;
+        else if (effect === 3) { p.maxHp += 12; p.hp = Math.min(p.maxHp, p.hp + 12); p.armor = Math.min(0.65, p.armor + 0.04); }
+        else p.speed *= 1.08;
+      } else if (category === 'mobility') {
+        if (effect === 0) p.speed *= 1.08;
+        else if (effect === 1) p.attackRate *= 0.94;
+        else if (effect === 2) p.abilityRate *= 0.94;
+        else if (effect === 3) p.rangeBonus += 12;
+        else { p.critBonus += 0.04; p.speed *= 1.05; }
+      } else {
+        if (effect === 0) p.xpMult += 0.08;
+        else if (effect === 1) p.coinMult += 0.25;
+        else if (effect === 2) p.pickupRange += 30;
+        else if (effect === 3) { p.maxHp += 10; p.hp = Math.min(p.maxHp, p.hp + 10); p.coinMult += 0.04; }
+        else { p.dmgMul *= 1.05; p.xpMult += 0.05; }
+      }
+      return;
+    }
     switch (id) {
       case 'keen_edge':
         p.dmgMul *= 1.22;
@@ -1373,14 +1438,7 @@ export class Game {
 
   /** Wave-scaled shop odds with locked tiers removed before normalization. */
   private shopRarityOdds(wave: number): Record<Rarity, number> {
-    const w = Math.max(1, wave);
-    const raw: Record<Rarity, number> = {
-      common: isShopRarityUnlocked('common', w) ? Math.max(0.7, 0.92 - w * 0.025) : 0,
-      rare: isShopRarityUnlocked('rare', w) ? Math.max(0.08, 0.18 + Math.max(0, w - 5) * 0.012) : 0,
-      epic: isShopRarityUnlocked('epic', w) ? Math.max(0.02, 0.05 + Math.max(0, w - 9) * 0.01) : 0,
-      legendary: isShopRarityUnlocked('legendary', w) ? Math.max(0.01, (w - 17) * 0.006) : 0,
-    };
-    return normalizeRarityWeights(raw);
+    return shopRarityOddsForWave(wave);
   }
 
   private rollShopRarity(wave: number): Rarity {
@@ -1527,7 +1585,7 @@ export class Game {
   /* ------------------------------- waves ----------------------------- */
 
   private startWave(n: number) {
-    this.wave = n;
+    this.wave = Math.min(FINAL_WAVE, n);
     this.waveDifficulty = waveDifficulty(this.currentHeroPower(), this.expectedHeroPower, n);
     this.zone = ZONES[(n - 1) % ZONES.length];
     const comp = waveComposition(n);
@@ -2062,7 +2120,7 @@ export class Game {
       p.hp += healed;
       if (this.kills % 3 === 0 || p.riteT > 0) this.floater(p.x, p.y - 28, `+${healed}`, 12, p.riteT > 0 ? '#ffd24a' : '#9defa4');
     }
-    this.gainXp(def.xp * (e.elite ? 2 : 1) * p.xpMult);
+    this.gainXp(xpWithBonus(def.xp * (e.elite ? 2 : 1), p.xpMult));
     this.burst(e.x, e.y, def.color, e.kind === 'boss' ? 46 : 16, e.kind === 'boss' ? 460 : 280, 'dot');
     this.burst(e.x, e.y, '#ffffff', 6, 240, 'spark');
     this.part(e.x, e.y, 0, 0, 0.45, e.r * 1.4, def.color, 'ring');
@@ -2099,8 +2157,13 @@ export class Game {
 
   private gainXp(amount: number) {
     const p = this.p!;
+    if (p.level >= MAX_PLAYER_LEVEL) {
+      p.xp = 0;
+      this.pendingLevels = 0;
+      return;
+    }
     p.xp += amount;
-    while (p.xp >= this.xpNeed(p.level)) {
+    while (p.level < MAX_PLAYER_LEVEL && p.xp >= this.xpNeed(p.level)) {
       p.xp -= this.xpNeed(p.level);
       p.level++;
       p.maxHp += 10;
@@ -2114,6 +2177,7 @@ export class Game {
       this.burst(p.x, p.y, '#ffd97a', 22, 260, 'spark');
       this.pushFeed(`You reached Lv ${p.level}! Choose a new power.`, '#46c8a8');
     }
+    if (p.level >= MAX_PLAYER_LEVEL) p.xp = 0;
     if (this.pendingLevels > 0 && this.state === 'playing') this.openLevelUp();
   }
 
@@ -2784,7 +2848,7 @@ export class Game {
     // wave flow
     if (this.waveBreak > 0) {
       this.waveBreak -= dt;
-      if (this.waveBreak <= 0) this.startWave(this.wave + 1);
+      if (this.waveBreak <= 0 && this.wave < FINAL_WAVE) this.startWave(this.wave + 1);
     } else if (this.queue.length && this.enemies.length < this.difficulty().activeCap) {
       this.spawnT -= dt;
       if (this.spawnT <= 0) {
@@ -2797,7 +2861,13 @@ export class Game {
       this.sfx.play('wave');
       this.pushFeed(`Wave ${this.wave} cleared! +${bonus} score`, '#46c8a8');
       this.announceSet(`WAVE ${this.wave} CLEARED · +${bonus}`);
-      this.openShop();
+      if (this.wave >= FINAL_WAVE) {
+        this.state = 'over';
+        this.music.duck(false);
+        this.opts.onState('over', this.getStats());
+      } else {
+        this.openShop();
+      }
       return;
     }
 

@@ -386,9 +386,13 @@ export type PowerId =
   | 'evo_storm_firststormlord'
   | 'evo_drake_firewave'
   | 'evo_drake_pyreburst'
-  | 'evo_drake_firstflameavatar';
+  | 'evo_drake_firstflameavatar'
+  | `expanded_${string}`;
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+export const FINAL_WAVE = 120;
+export const MAX_PLAYER_LEVEL = 60;
 
 export const RARITY_META: Record<Rarity, { label: string; color: string; weight: number }> = {
   common: { label: 'COMMON', color: '#aab4c5', weight: 1 },
@@ -398,12 +402,54 @@ export const RARITY_META: Record<Rarity, { label: string; color: string; weight:
 };
 
 /** Single source of truth for rarity unlock gating. */
-export const RARE_UNLOCK_LEVEL = 5;
-export const EPIC_UNLOCK_LEVEL = 10;
-export const LEGENDARY_UNLOCK_LEVEL = 18;
-export const SHOP_RARE_UNLOCK_WAVE = 5;
-export const SHOP_EPIC_UNLOCK_WAVE = 10;
-export const SHOP_LEGENDARY_UNLOCK_WAVE = 18;
+export const RARE_UNLOCK_LEVEL = 12;
+export const EPIC_UNLOCK_LEVEL = 28;
+export const LEGENDARY_UNLOCK_LEVEL = 48;
+export const SHOP_RARE_UNLOCK_WAVE = 20;
+export const SHOP_EPIC_UNLOCK_WAVE = 55;
+export const SHOP_LEGENDARY_UNLOCK_WAVE = 90;
+
+export function rarityOddsForLevel(level: number): Record<Rarity, number> {
+  const cappedLevel = Math.min(MAX_PLAYER_LEVEL, Math.max(1, level));
+  const raw: Record<Rarity, number> = {
+    common: Math.max(0.56, 0.9 - Math.max(0, cappedLevel - 1) * 0.006),
+    rare: isRarityUnlocked('rare', cappedLevel) ? Math.min(0.28, 0.16 + Math.max(0, cappedLevel - RARE_UNLOCK_LEVEL) * 0.004) : 0,
+    epic: isRarityUnlocked('epic', cappedLevel) ? Math.min(0.18, 0.05 + Math.max(0, cappedLevel - EPIC_UNLOCK_LEVEL) * 0.004) : 0,
+    legendary: isRarityUnlocked('legendary', cappedLevel) ? Math.min(0.08, 0.01 + Math.max(0, cappedLevel - LEGENDARY_UNLOCK_LEVEL) * 0.005) : 0,
+  };
+  const total = Object.values(raw).reduce((sum, value) => sum + value, 0);
+  return {
+    common: raw.common / total,
+    rare: raw.rare / total,
+    epic: raw.epic / total,
+    legendary: raw.legendary / total,
+  };
+}
+
+export function shopRarityOddsForWave(wave: number): Record<Rarity, number> {
+  const cappedWave = Math.min(FINAL_WAVE, Math.max(1, wave));
+  const raw: Record<Rarity, number> = {
+    common: Math.max(0.52, 0.92 - cappedWave * 0.0025),
+    rare: isShopRarityUnlocked('rare', cappedWave) ? Math.min(0.3, 0.16 + Math.max(0, cappedWave - SHOP_RARE_UNLOCK_WAVE) * 0.0025) : 0,
+    epic: isShopRarityUnlocked('epic', cappedWave) ? Math.min(0.2, 0.04 + Math.max(0, cappedWave - SHOP_EPIC_UNLOCK_WAVE) * 0.003) : 0,
+    legendary: isShopRarityUnlocked('legendary', cappedWave) ? Math.min(0.1, 0.01 + Math.max(0, cappedWave - SHOP_LEGENDARY_UNLOCK_WAVE) * 0.004) : 0,
+  };
+  const total = Object.values(raw).reduce((sum, value) => sum + value, 0);
+  return {
+    common: raw.common / total,
+    rare: raw.rare / total,
+    epic: raw.epic / total,
+    legendary: raw.legendary / total,
+  };
+}
+
+export function xpWithBonus(baseXp: number, bonusMultiplier: number): number {
+  return baseXp * Math.max(1, bonusMultiplier);
+}
+
+export function canOpenLevelUp(level: number, pendingLevels: number, validChoiceCount: number): boolean {
+  return level < MAX_PLAYER_LEVEL && pendingLevels > 0 && validChoiceCount > 0;
+}
 
 /** Whether a level-up power rarity is unlocked at the given player level. */
 export function isRarityUnlocked(rarity: Rarity, level: number): boolean {
@@ -499,6 +545,10 @@ export const POWER_STACK_LIMITS: Partial<Record<PowerId, number>> = {
 
 export function getPowerStackCap(powerId: PowerId | string): number | null {
   const cap = POWER_STACK_LIMITS[powerId as PowerId];
+  if (powerId.startsWith('expanded_')) {
+    const index = Number(powerId.split('_').pop());
+    return index >= 26 ? 1 : index >= 18 ? 2 : 3;
+  }
   return typeof cap === 'number' ? cap : null;
 }
 
@@ -507,6 +557,45 @@ export function isPowerAvailable(powerId: PowerId, ownedPowerIds: PowerId[]): bo
   if (cap === null) return true;
   return ownedPowerIds.filter((ownedId) => ownedId === powerId).length < cap;
 }
+
+const EXPANDED_POWER_NAMES = {
+  offense: ['Ember Edge', 'Rift Lance', 'Falling Star', 'Warpath', 'Crimson Measure', 'Searing Point', 'Moonlit Cut', 'Ashen Volley', 'Iron Comet', 'Storm Fang', 'Sunbreak', 'Gravebrand', 'Hollow Crown', 'Flare Dance', 'Abyssal Bite', 'Dawnpiercer', 'Wildfire Rhythm', 'Vigilant Strike', 'Glass Cannon', 'Thundering Arc', 'Night Hunt', 'Cinder Mark', 'Aether Spear', 'Final Flourish', 'Ruinous Beat', 'Brightscar', 'Tempest Edge', 'Starved Blade', 'Worldsplitter'],
+  defense: ['Bastion Oath', 'Stoneheart', 'Mending Ward', 'Bulwark Pulse', 'Last Stand', 'Frosthide', 'Rooted Soul', 'Hearthguard', 'Aegis Thread', 'Quiet Shelter', 'Keeper of Ash', 'Vital Current', 'Granite Will', 'Wellspring', 'Oathbound', 'Shielding Bloom', 'Second Wind', 'Sovereign Guard', 'Lifeweaver', 'Iron Resolve', 'Safe Harbor', 'Guardian Ring', 'Deep Reserve', 'Refusing End', 'Mortal Anchor', 'Aether Shell', 'Unbroken Line', 'Dawn Bastion', 'Eternal Ward'],
+  mobility: ['Fleetfoot', 'Wind Rake', 'Blink Rhythm', 'Swift Current', 'Horizon Step', 'Dancing Reach', 'Quickdraw', 'Wayfinder', 'Rush of Stars', 'Slipstream', 'Tactical Dash', 'Farwalker', 'Tempo Shift', 'Mirage Pace', 'Keen Momentum', 'Silver Stride', 'Afterwind', 'Chase the Sun', 'Phase Runner', 'Relentless Motion', 'Skybound', 'Hasteweaver', 'Rapid Cadence', 'Voidstep', 'Crosswind', 'Liminal Pace', 'Flashpoint', 'Unseen Route', 'Aether Velocity'],
+  utility: ['Aether Ledger', 'Hunter\'s Bounty', 'Resonant Memory', 'Lucky Break', 'Scholar\'s Eye', 'Coinwake', 'Deep Pockets', 'Echo of Plenty', 'Ruin Cartographer', 'Harvest Rune', 'Fate Thread', 'Prospector\'s Instinct', 'Experience Well', 'Golden Hour', 'Aether Compass', 'Scavenger\'s Grace', 'Living Map', 'Treasure Sense', 'Lasting Insight', 'Merchant\'s Favor', 'Bounty Circuit', 'Wellspring Coin', 'Archive of Fates', 'Fortune\'s Wake', 'Relic Sense', 'Aether Dividend', 'Pathfinder\'s Luck', 'Crown of Plenty', 'Endless Ledger'],
+} as const;
+
+function expandedPowerRarity(index: number): Rarity {
+  if (index < 8) return 'common';
+  if (index < 18) return 'rare';
+  if (index < 26) return 'epic';
+  return 'legendary';
+}
+
+function expandedPower(category: keyof typeof EXPANDED_POWER_NAMES, index: number, name: string): PowerDef {
+  const rarity = expandedPowerRarity(index);
+  const descriptions = {
+    offense: ['+9% weapon damage.', '+5% critical chance.', '+18 weapon reach.', '+7% attack speed.', '+12% weapon damage and +8 reach.'],
+    defense: ['+20 max health and restore it.', 'Take 6% less damage.', 'Heal 2 health per kill.', '+12 max health and +4% armor.', '+8% movement speed while below half health.'],
+    mobility: ['+8% movement speed.', '+6% attack speed.', 'Ability cooldowns are 6% shorter.', '+12 weapon reach.', '+4% critical chance and +5% speed.'],
+    utility: ['+8% experience from defeated foes.', '+25% coin value.', '+30 pickup range.', '+10 max health and +4% coin value.', '+5% weapon damage and +5% experience.'],
+  }[category];
+  return {
+    id: `expanded_${category}_${index}` as PowerId,
+    name,
+    kicker: category.toUpperCase(),
+    desc: descriptions[index % descriptions.length],
+    color: category === 'offense' ? '#ff9a7d' : category === 'defense' ? '#8fc7ff' : category === 'mobility' ? '#78e0d0' : '#ffd36b',
+    icon: category === 'offense' ? 'blade' : category === 'defense' ? 'shield' : category === 'mobility' ? 'boot' : 'coin',
+    rarity,
+    recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade', 'stormwarden', 'drakewarden'],
+    stacks: `${category} path · repeatable`,
+    maxStacks: rarity === 'legendary' ? 1 : rarity === 'epic' ? 2 : 3,
+  };
+}
+
+const EXPANDED_POWERS: PowerDef[] = (Object.entries(EXPANDED_POWER_NAMES) as [keyof typeof EXPANDED_POWER_NAMES, readonly string[]][])
+  .flatMap(([category, names]) => names.map((name, index) => expandedPower(category, index, name)));
 
 export const POWERS: PowerDef[] = [
   {
@@ -873,9 +962,10 @@ export const POWERS: PowerDef[] = [
     color: '#ffffff', icon: 'sun',
     rarity: 'legendary', recommended: ['drakewarden'], stacks: 'Triple fire wave cataclysm + wyrms',
   },
+  ...EXPANDED_POWERS,
 ];
 
-export type ShopItemId = 'rations' | 'tonic' | 'steel' | 'boots' | 'ward' | 'sigil' | 'whetstone' | 'hourglass' | 'magnet' | 'elixir' | 'prism' | 'war_banner';
+export type ShopItemId = 'rations' | 'tonic' | 'steel' | 'boots' | 'ward' | 'sigil' | 'whetstone' | 'hourglass' | 'magnet' | 'elixir' | 'prism' | 'war_banner' | 'xp_tome' | `expanded_shop_${string}`;
 
 export interface ShopItemDef {
   id: ShopItemId;
@@ -900,12 +990,45 @@ export const SHOP_ITEM_STACK_LIMITS: Partial<Record<ShopItemId, number>> = {
   hourglass: 2,
   magnet: 3,
   war_banner: 2,
+  xp_tome: 5,
 };
 
 export function getShopItemStackCap(itemId: ShopItemId | string): number | null {
   const cap = SHOP_ITEM_STACK_LIMITS[itemId as ShopItemId];
+  if (itemId.startsWith('expanded_shop_')) {
+    const index = Number(itemId.split('_').pop());
+    return index >= 30 ? 1 : index >= 20 ? 2 : 3;
+  }
   return typeof cap === 'number' ? cap : null;
 }
+
+const EXPANDED_SHOP_NAMES = ['Hunter\'s Draught', 'Aegis Oil', 'Swiftwind Salve', 'Piercing Dust', 'Vitality Seal', 'Echo Battery', 'Goldleaf Charm', 'Farsight Lens', 'Bulwark Core', 'Razor Thread', 'Mercury Coil', 'Sunderstone', 'Lifebloom Vial', 'Dashweave', 'Coinbinder', 'Arcane Magazine', 'Sunken Reliquary', 'Warden\'s Plate', 'Storm Cartridge', 'Hearthstone', 'Void Purse', 'Dragonbone Grip', 'Mirage Compass', 'Starforged Edge', 'Crown of Haste', 'Aether Reservoir', 'Phoenix Thread', 'Worldroot Talisman', 'Eclipse Lens', 'Sovereign Cache', 'First Flame Relic', 'Endless Hour', 'Legend\'s Dividend', 'Aether Crown', 'Realmheart'];
+
+function expandedShopRarity(index: number): Rarity {
+  if (index < 9) return 'common';
+  if (index < 20) return 'rare';
+  if (index < 30) return 'epic';
+  return 'legendary';
+}
+
+const EXPANDED_SHOP_ITEMS: ShopItemDef[] = EXPANDED_SHOP_NAMES.map((name, index) => {
+  const rarity = expandedShopRarity(index);
+  const cost = rarity === 'common' ? 1200 + index * 120 : rarity === 'rare' ? 7000 + index * 450 : rarity === 'epic' ? 18000 + index * 900 : 45000 + index * 2500;
+  const effect = index % 6;
+  const desc = effect === 0 ? '+8% weapon damage for the rest of this run.' : effect === 1 ? '+8% attack speed for the rest of this run.' : effect === 2 ? '+10% movement speed for the rest of this run.' : effect === 3 ? '+18 max health and restore it now.' : effect === 4 ? '+6% critical chance for the rest of this run.' : '+35% coin value for the rest of this run.';
+  return {
+    id: `expanded_shop_${index}` as ShopItemId,
+    name,
+    kicker: 'PERMANENT',
+    desc,
+    cost,
+    color: rarity === 'legendary' ? '#ffd36b' : rarity === 'epic' ? '#c184ff' : rarity === 'rare' ? '#61b9ff' : '#aab4c5',
+    icon: effect === 0 || effect === 4 ? 'blade' : effect === 1 || effect === 2 ? 'boot' : effect === 3 ? 'heart' : 'spark',
+    rarity,
+    recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade', 'stormwarden', 'drakewarden'],
+    duration: 'Rest of run · stacks',
+  };
+});
 
 export const SHOP_ITEMS: ShopItemDef[] = [
   {
@@ -998,4 +1121,10 @@ export const SHOP_ITEMS: ShopItemDef[] = [
     desc: '+18% damage, +10% movement speed and +15 max health.', cost: 12000, color: '#ffd36b', icon: 'sun',
     rarity: 'legendary', recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade'], duration: 'Rest of run · stacks',
   },
+  {
+    id: 'xp_tome', name: 'Tome of Aether Insight', kicker: 'PERMANENT',
+    desc: '+12% experience from defeated foes for the rest of this run.', cost: 9000, color: '#7de7ff', icon: 'spark',
+    rarity: 'epic', recommended: ['kensei', 'shieldthane', 'jaguar', 'sandseer', 'tidecaller', 'riftblade'], duration: 'Rest of run · stacks',
+  },
+  ...EXPANDED_SHOP_ITEMS,
 ];
