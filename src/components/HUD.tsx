@@ -291,7 +291,10 @@ export function HUD({ bus, isTouch, onPause, onOpenSettings }: Props) {
           <div
             ref={announceRef}
             className="font-display font-black text-gold text-emboss tracking-[0.12em] text-center opacity-0 whitespace-nowrap"
-            style={{ fontSize: 'clamp(12px, 3.8vw, 34px)', marginTop: compact ? 10 : 24 }}
+            style={{
+              fontSize: 'clamp(12px, 3.8vw, 34px)',
+              marginTop: isTouch ? (vp.h < 430 ? 136 : 148) : compact ? 10 : 24,
+            }}
           />
           <div ref={bossWrap} className="mt-1" style={{ display: 'none', width: compact ? '68vw' : 'min(440px, 66vw)' }}>
             <div className="flex justify-between font-bold tracking-wider mb-0.5 px-0.5" style={{ fontSize: compact ? 8.5 : 10 }}>
